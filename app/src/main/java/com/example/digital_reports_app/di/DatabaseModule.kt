@@ -2,6 +2,7 @@ package com.example.digital_reports_app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.digital_reports_app.data.local.dao.ReportDao
 import com.example.digital_reports_app.data.local.dao.UserDao
 import com.example.digital_reports_app.data.local.database.AppDatabase
 import com.example.digital_reports_app.data.local.entity.UserEntity
@@ -26,42 +27,21 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "digital_reports.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
 
         CoroutineScope(Dispatchers.IO).launch {
-            if (db.userDao().getUserByEmail("ejemplo@correo.com") == null) {
+            if (db.userDao().getUserByCode("215800") == null) {
                 db.userDao().insertUsers(
                     listOf(
                         UserEntity(
-                            userId = "usr_001",
-                            email = "ejemplo@correo.com",
-                            name = "Juan Pérez",
-                            passwordHash = "123456",
+                            userId = "admin_215800",
+                            userCode = "215800",
+                            name = "Administrador",
+                            passwordHash = "Prd12345#",
+                            role = "ADMIN",
                             shift = "DIURNO",
-                            isAssignedToDevice = true
-                        ),
-                        UserEntity(
-                            userId = "usr_002",
-                            email = "sandeep@empresa.com",
-                            name = "Sandeep Jadhav",
-                            passwordHash = "123456",
-                            shift = "DIURNO",
-                            isAssignedToDevice = true
-                        ),
-                        UserEntity(
-                            userId = "usr_003",
-                            email = "prakash@empresa.com",
-                            name = "Prakash Sharma",
-                            passwordHash = "123456",
-                            shift = "NOCTURNO",
-                            isAssignedToDevice = true
-                        ),
-                        UserEntity(
-                            userId = "usr_004",
-                            email = "mahesh@empresa.com",
-                            name = "Mahesh Patil",
-                            passwordHash = "123456",
-                            shift = "NOCTURNO",
                             isAssignedToDevice = true
                         )
                     )
@@ -75,5 +55,10 @@ object DatabaseModule {
     @Provides
     fun provideUserDao(database: AppDatabase): UserDao {
         return database.userDao()
+    }
+
+    @Provides
+    fun provideReportDao(database: AppDatabase): ReportDao {
+        return database.reportDao()
     }
 }

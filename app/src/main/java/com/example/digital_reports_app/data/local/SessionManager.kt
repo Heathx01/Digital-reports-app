@@ -19,7 +19,7 @@ class SessionManager @Inject constructor(
     companion object {
         private val KEY_USER_ID = stringPreferencesKey("current_user_id")
         private val KEY_USER_NAME = stringPreferencesKey("current_user_name")
-        private val KEY_USER_EMAIL = stringPreferencesKey("current_user_email")
+        private val KEY_USER_CODE = stringPreferencesKey("current_user_code")
     }
 
     val currentUserId: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -30,11 +30,15 @@ class SessionManager @Inject constructor(
         preferences[KEY_USER_NAME]
     }
 
-    suspend fun saveSession(userId: String, name: String, email: String) {
+    val currentUserCode: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[KEY_USER_CODE]
+    }
+
+    suspend fun saveSession(userId: String, name: String, userCode: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_USER_ID] = userId
             preferences[KEY_USER_NAME] = name
-            preferences[KEY_USER_EMAIL] = email
+            preferences[KEY_USER_CODE] = userCode
         }
     }
 
