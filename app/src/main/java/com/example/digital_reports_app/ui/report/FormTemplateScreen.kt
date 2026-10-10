@@ -6,8 +6,10 @@ import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,12 +30,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -79,7 +86,7 @@ data class ReportTemplateItem(
     val icon: ImageVector = Icons.Outlined.Edit
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FormTemplateScreen(
     onBack: () -> Unit,
@@ -88,7 +95,7 @@ fun FormTemplateScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Dynamic Templates List (Support Scan, Create & Edit Template)
+    // Dynamic Templates List
     val templates = remember {
         mutableStateListOf(
             ReportTemplateItem(
@@ -125,8 +132,14 @@ fun FormTemplateScreen(
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var showCreateTemplateDialog by remember { mutableStateOf(false) }
+    var showScanDocumentDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    // Dialog state for New Template
+    // Multi-Selection State for Long Press
+    var isSelectionMode by remember { mutableStateOf(false) }
+    val selectedTemplateIds = remember { mutableStateListOf<String>() }
+
+    // Dialog state for New Template / Scan
     var newTemplateTitle by remember { mutableStateOf("") }
     var newTemplateCategory by remember { mutableStateOf("Inspección") }
     var newTemplateDescription by remember { mutableStateOf("") }
@@ -139,35 +152,69 @@ fun FormTemplateScreen(
     var selectedAreaStatus by remember { mutableStateOf("Bueno") }
     var temperatureInput by remember { mutableStateOf("24") }
 
-    // 1. Camera TakePicturePreview Launcher: Captures photo & Analyzes photo to create template automatically
+    // Selection Helper functions
+    val toggleSelection = { templateId: String ->
+        if (selectedTemplateIds.contains(templateId)) {
+            selectedTemplateIds.remove(templateId)
+            if (selectedTemplateIds.isEmpty()) {
+                isSelectionMode = false
+            }
+        } else {
+            selectedTemplateIds.add(templateId)
+        }
+    }
+
+    val startSelection = { templateId: String ->
+        isSelectionMode = true
+        selectedTemplateIds.clear()
+        selectedTemplateIds.add(templateId)
+    }
+
+    val clearSelection = {
+        isSelectionMode = false
+        selectedTemplateIds.clear()
+    }
+
+    val moveSelectedUp = {
+        val indices = templates.indices.filter { selectedTemplateIds.contains(templates[it].id) }
+        for (i in indices) {
+            if (i > 0 && !selectedTemplateIds.contains(templates[i - 1].id)) {
+                val temp = templates[i]
+                templates[i] = templates[i - 1]
+                templates[i - 1] = temp
+            }
+        }
+    }
+
+    val moveSelectedDown = {
+        val indices = templates.indices.filter { selectedTemplateIds.contains(templates[it].id) }.reversed()
+        for (i in indices) {
+            if (i < templates.size - 1 && !selectedTemplateIds.contains(templates[i + 1].id)) {
+                val temp = templates[i]
+                templates[i] = templates[i + 1]
+                templates[i + 1] = temp
+            }
+        }
+    }
+
+    // 1. Camera TakePicturePreview Launcher: Redirects to Scan Dialog to set Name and Type
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            // Analyze the captured photo with DocumentTextAnalyzer
             val nextIndex = templates.size + 1
             val result = DocumentTextAnalyzer.analyzeScannedBitmap(bitmap, nextIndex)
 
-            val scannedTemplate = ReportTemplateItem(
-                id = "scanned_tpl_${System.currentTimeMillis()}",
-                title = result.templateTitle,
-                category = result.category,
-                description = result.description,
-                icon = Icons.Outlined.Edit
-            )
+            newTemplateTitle = result.templateTitle
+            newTemplateCategory = result.category
+            newTemplateDescription = result.description
 
-            // Add the newly created template to the list
-            templates.add(0, scannedTemplate)
-
-            // Automatically select the scanned template and open the form editor!
-            selectedTemplate = scannedTemplate
-            viewModel.onTitleChanged(scannedTemplate.title)
-            viewModel.onCategoryChanged(scannedTemplate.category)
-
+            // Redirects to Template Module Config Dialog to allow setting Name and Type
+            showScanDocumentDialog = true
             Toast.makeText(
                 context,
-                "¡Foto analizada! Plantilla '${scannedTemplate.title}' creada con éxito",
-                Toast.LENGTH_LONG
+                "Documento capturado. Asigna nombre y tipo a la plantilla.",
+                Toast.LENGTH_SHORT
             ).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
@@ -222,22 +269,49 @@ fun FormTemplateScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(
-                            text = if (selectedTemplate == null) "Gestión de Plantillas" else "Llenar Formulario de Reporte",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (selectedTemplate == null) "Selecciona, escanea o crea una plantilla" else "Paso 2: Rellena los datos para generar el reporte",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (isSelectionMode) {
+                            Text(
+                                text = "${selectedTemplateIds.size} seleccionada(s)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Mover, editar o eliminar plantillas",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (selectedTemplate == null) {
+                            Text(
+                                text = "Gestión de Plantillas",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Selecciona, escanea o mantén presionado para gestionar",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                text = "Llenar Formulario de Reporte",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Paso 2: Rellena los datos para generar el reporte",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            if (selectedTemplate != null) {
+                            if (isSelectionMode) {
+                                clearSelection()
+                            } else if (selectedTemplate != null) {
                                 selectedTemplate = null
                             } else {
                                 onBack()
@@ -245,10 +319,58 @@ fun FormTemplateScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver",
+                            imageVector = if (isSelectionMode) Icons.Outlined.Close else Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Volver / Cancelar",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                },
+                actions = {
+                    if (isSelectionMode && selectedTemplate == null) {
+                        // Move Up
+                        IconButton(onClick = { moveSelectedUp() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowUp,
+                                contentDescription = "Mover Arriba",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Move Down
+                        IconButton(onClick = { moveSelectedDown() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "Mover Abajo",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Edit if exactly 1 item selected
+                        if (selectedTemplateIds.size == 1) {
+                            IconButton(
+                                onClick = {
+                                    val target = templates.find { it.id == selectedTemplateIds.first() }
+                                    if (target != null) {
+                                        templateToEdit = target
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = "Editar Plantilla",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        // Delete selected items
+                        IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Eliminar Seleccionadas",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -264,7 +386,7 @@ fun FormTemplateScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            // STEP 1: SELECT, SCAN, CREATE OR EDIT TEMPLATE
+            // STEP 1: SELECT, SCAN, CREATE OR MULTI-SELECT TEMPLATE
             if (selectedTemplate == null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -279,11 +401,9 @@ fun FormTemplateScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Scan Document via Native Camera Button
+                        // Scan Document Button
                         OutlinedButton(
-                            onClick = {
-                                triggerCameraOrScan()
-                            },
+                            onClick = { triggerCameraOrScan() },
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -315,15 +435,42 @@ fun FormTemplateScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 templates.forEach { template ->
+                    val isSelected = selectedTemplateIds.contains(template.id)
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(cornerRadius = 18.dp, prominent = true)
-                            .clickable {
-                                selectedTemplate = template
-                                viewModel.onTitleChanged(template.title)
-                                viewModel.onCategoryChanged(template.category)
-                            }
+                            .liquidGlass(
+                                cornerRadius = 18.dp,
+                                prominent = true
+                            )
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                } else Modifier
+                            )
+                            .combinedClickable(
+                                onClick = {
+                                    if (isSelectionMode) {
+                                        toggleSelection(template.id)
+                                    } else {
+                                        selectedTemplate = template
+                                        viewModel.onTitleChanged(template.title)
+                                        viewModel.onCategoryChanged(template.category)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!isSelectionMode) {
+                                        startSelection(template.id)
+                                    } else {
+                                        toggleSelection(template.id)
+                                    }
+                                }
+                            )
                             .padding(18.dp)
                     ) {
                         Column {
@@ -336,6 +483,14 @@ fun FormTemplateScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)
                                 ) {
+                                    if (isSelectionMode) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = { toggleSelection(template.id) }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)
@@ -361,17 +516,19 @@ fun FormTemplateScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Categoría: ${template.category}",
+                                            text = "Categoría / Tipo: ${template.category}",
                                             style = TelemetryMonoStyle,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
 
-                                TextButton(
-                                    onClick = { templateToEdit = template }
-                                ) {
-                                    Text("Editar", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                if (!isSelectionMode) {
+                                    TextButton(
+                                        onClick = { templateToEdit = template }
+                                    ) {
+                                        Text("Editar", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
 
@@ -383,14 +540,15 @@ fun FormTemplateScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = "Toca para usar esta plantilla y llenar el reporte →",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            if (!isSelectionMode) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Toca para llenar reporte • Mantén presionado para seleccionar →",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
@@ -600,6 +758,70 @@ fun FormTemplateScreen(
         }
     }
 
+    // SCAN PHYSICAL DOCUMENT CONFIG DIALOG (Requirement 1: Assign Name & Type)
+    if (showScanDocumentDialog) {
+        AlertDialog(
+            onDismissRequest = { showScanDocumentDialog = false },
+            title = { Text("Configurar Plantilla Escaneada", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Foto del formato capturada. Ingresa el nombre y tipo/categoría para la nueva plantilla:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = newTemplateTitle,
+                        onValueChange = { newTemplateTitle = it },
+                        label = { Text("Nombre de la Plantilla *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTemplateCategory,
+                        onValueChange = { newTemplateCategory = it },
+                        label = { Text("Tipo / Categoría (ej. Inspección, Mantenimiento)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTemplateDescription,
+                        onValueChange = { newTemplateDescription = it },
+                        label = { Text("Descripción / Instrucciones") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newTemplateTitle.isNotBlank()) {
+                            val scannedTpl = ReportTemplateItem(
+                                id = "scanned_tpl_${System.currentTimeMillis()}",
+                                title = newTemplateTitle.trim(),
+                                category = newTemplateCategory.trim().ifBlank { "Inspección" },
+                                description = newTemplateDescription.trim().ifBlank { "Plantilla extraída mediante captura de cámara del formato físico." },
+                                icon = Icons.Outlined.Edit
+                            )
+                            templates.add(0, scannedTpl)
+                            showScanDocumentDialog = false
+                            Toast.makeText(context, "Plantilla '${scannedTpl.title}' añadida al módulo", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar en Plantillas", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showScanDocumentDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     // CREATE NEW TEMPLATE DIALOG
     if (showCreateTemplateDialog) {
         AlertDialog(
@@ -617,7 +839,7 @@ fun FormTemplateScreen(
                     OutlinedTextField(
                         value = newTemplateCategory,
                         onValueChange = { newTemplateCategory = it },
-                        label = { Text("Categoría (ej. Inspección, Mantenimiento)") },
+                        label = { Text("Tipo / Categoría (ej. Inspección, Mantenimiento)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -680,7 +902,7 @@ fun FormTemplateScreen(
                     OutlinedTextField(
                         value = editCategory,
                         onValueChange = { editCategory = it },
-                        label = { Text("Categoría") },
+                        label = { Text("Tipo / Categoría") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -707,6 +929,7 @@ fun FormTemplateScreen(
                             Toast.makeText(context, "Plantilla actualizada", Toast.LENGTH_SHORT).show()
                         }
                         templateToEdit = null
+                        clearSelection()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
@@ -715,6 +938,35 @@ fun FormTemplateScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { templateToEdit = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // DELETE CONFIRMATION DIALOG FOR MULTI-SELECTION
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Eliminar Plantillas", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("¿Estás seguro de que deseas eliminar ${selectedTemplateIds.size} plantilla(s) seleccionada(s)? Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        templates.removeAll { selectedTemplateIds.contains(it.id) }
+                        Toast.makeText(context, "${selectedTemplateIds.size} plantilla(s) eliminada(s)", Toast.LENGTH_SHORT).show()
+                        showDeleteConfirmDialog = false
+                        clearSelection()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirmDialog = false }) {
                     Text("Cancelar")
                 }
             }
