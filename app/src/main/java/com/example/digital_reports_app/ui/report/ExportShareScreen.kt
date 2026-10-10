@@ -18,13 +18,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -33,10 +42,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.liquidGlass
@@ -57,8 +66,12 @@ fun ExportShareScreen(
             TopAppBar(
                 title = { Text("") },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("←", fontSize = 24.sp)
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -89,7 +102,12 @@ fun ExportShareScreen(
                         .background(StatusSuccessGreen, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✓", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "Éxito",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
 
@@ -124,10 +142,15 @@ fun ExportShareScreen(
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .background(Color(0xFFFEE2E2), RoundedCornerShape(10.dp)),
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("📄", fontSize = 22.sp)
+                        Icon(
+                            imageVector = Icons.Outlined.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -184,55 +207,26 @@ fun ExportShareScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ShareOptionButton("🔗", "Enlace") {
+                ShareOptionButton(Icons.Outlined.Share, "Enlace") {
                     Toast.makeText(context, "Enlace copiado al portapapeles", Toast.LENGTH_SHORT).show()
                 }
-                ShareOptionButton("✉️", "Correo") {
+                ShareOptionButton(Icons.Outlined.Email, "Correo") {
                     if (report != null) {
                         val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
                         PdfReportGenerator.openPdfFile(context, pdfFile)
                     }
                 }
-                ShareOptionButton("💬", "WhatsApp") {
+                ShareOptionButton(Icons.Outlined.Phone, "Mensaje") {
                     if (report != null) {
                         val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
                         PdfReportGenerator.openPdfFile(context, pdfFile)
                     }
                 }
-                ShareOptionButton("•••", "Más") {
+                ShareOptionButton(Icons.Outlined.MoreVert, "Más") {
                     if (report != null) {
                         val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
                         PdfReportGenerator.openPdfFile(context, pdfFile)
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Exportar Section
-            Text(
-                text = "Exportar",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.align(Alignment.Start)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ExportRowItem(icon = "⬇️", title = "Guardar en dispositivo") {
-                if (report != null) {
-                    val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
-                    Toast.makeText(context, "PDF guardado en ${pdfFile.absolutePath}", Toast.LENGTH_LONG).show()
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ExportRowItem(icon = "🖨️", title = "Imprimir") {
-                if (report != null) {
-                    val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
-                    PdfReportGenerator.openPdfFile(context, pdfFile)
                 }
             }
         }
@@ -241,7 +235,7 @@ fun ExportShareScreen(
 
 @Composable
 private fun ShareOptionButton(
-    iconText: String,
+    icon: ImageVector,
     label: String,
     onClick: () -> Unit
 ) {
@@ -256,7 +250,12 @@ private fun ShareOptionButton(
                 .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Text(iconText, fontSize = 20.sp)
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -264,38 +263,5 @@ private fun ShareOptionButton(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun ExportRowItem(
-    icon: String,
-    title: String,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlass(cornerRadius = 14.dp)
-            .clickable { onClick() }
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(icon, fontSize = 18.sp)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }

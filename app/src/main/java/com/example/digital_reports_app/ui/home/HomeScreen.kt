@@ -18,9 +18,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,6 +69,7 @@ fun HomeScreen(
     onReportClick: (String) -> Unit,
     onProfileClick: () -> Unit,
     onBitacoraClick: () -> Unit,
+    onPendingReportsClick: () -> Unit = onBitacoraClick,
     homeViewModel: HomeViewModel = hiltViewModel(),
     reportListViewModel: ReportListViewModel = hiltViewModel()
 ) {
@@ -78,8 +92,9 @@ fun HomeScreen(
         bottomBar = {
             WorkProBottomNavBar(
                 currentRoute = Screen.HOME,
-                onTabSelected = { route ->
-                    when (route) {
+                onTabSelected = { tabTarget ->
+                    when (tabTarget) {
+                        "PENDIENTES" -> onPendingReportsClick()
                         Screen.CREATE_REPORT -> onCreateReportClick()
                         Screen.BITACORA, Screen.REPORTS_LIST -> onBitacoraClick()
                         Screen.PROFILE -> onProfileClick()
@@ -117,17 +132,34 @@ fun HomeScreen(
                     )
                 }
 
-                IconButton(
-                    onClick = {
-                        val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
-                        WorkManager.getInstance(context).enqueue(syncRequest)
-                        Toast.makeText(context, "Sincronización en segundo plano iniciada", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier
-                        .size(44.dp)
-                        .liquidGlass(cornerRadius = 22.dp, prominent = true)
-                ) {
-                    Text("🔔", fontSize = 20.sp)
+                Box {
+                    IconButton(
+                        onClick = {
+                            homeViewModel.toggleNotificationsDialog(true)
+                            val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
+                            WorkManager.getInstance(context).enqueue(syncRequest)
+                        },
+                        modifier = Modifier
+                            .size(44.dp)
+                            .liquidGlass(cornerRadius = 22.dp, prominent = true)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notificaciones",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    // Indicator Badge for unsynced pending reports
+                    if (pendingCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                .align(Alignment.TopEnd)
+                        )
+                    }
                 }
             }
 
@@ -153,12 +185,23 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                        Text(
-                            text = "EN LÍNEA",
-                            style = TelemetryMonoStyle.copy(fontSize = 10.sp),
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Bold
-                        )
+
+                        // Point 2: Dynamic Connectivity Status Badge
+                        val networkStatusText = if (homeUiState.isOnline) "EN LÍNEA" else "OFFLINE (BÚFER SEGURO)"
+                        val networkBadgeBg = if (homeUiState.isOnline) Color(0x3322C55E) else Color(0x33F59E0B)
+
+                        Box(
+                            modifier = Modifier
+                                .background(networkBadgeBg, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = networkStatusText,
+                                style = TelemetryMonoStyle.copy(fontSize = 10.sp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -232,24 +275,136 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Nuevo Reporte
+                // Nuevo Reporte en blanco
                 ModuleCard(
                     title = "Nuevo Reporte",
                     subtitle = "Crear reporte técnico",
-                    iconText = "➕",
+                    icon = Icons.Outlined.Add,
                     onClick = onCreateReportClick,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Plantillas
+                // Point 3: Plantillas ISO con selector
                 ModuleCard(
                     title = "Plantillas ISO",
                     subtitle = "Formatos homologados",
-                    iconText = "📄",
-                    onClick = onCreateReportClick,
+                    icon = Icons.Outlined.DateRange,
+                    onClick = { homeViewModel.toggleTemplatesDialog(true) },
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+    }
+
+    // Point 1: Notifications Modal Dialog
+    if (homeUiState.showNotificationsDialog) {
+        AlertDialog(
+            onDismissRequest = { homeViewModel.toggleNotificationsDialog(false) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Telemetría y Notificaciones", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    homeUiState.notifications.forEach { item ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(cornerRadius = 12.dp)
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    Text(item.timeFormatted, style = TelemetryMonoStyle.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(item.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { homeViewModel.toggleNotificationsDialog(false) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Entendido", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Point 3: ISO Templates Selector Modal Dialog
+    if (homeUiState.showTemplatesDialog) {
+        AlertDialog(
+            onDismissRequest = { homeViewModel.toggleTemplatesDialog(false) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.DateRange,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Plantillas Homologadas ISO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TemplateOptionItem("ISO 9001 - Inspección Diurna Planta") {
+                        homeViewModel.toggleTemplatesDialog(false)
+                        onCreateReportClick()
+                    }
+                    TemplateOptionItem("ISO 14001 - Control Ambiental y Gas") {
+                        homeViewModel.toggleTemplatesDialog(false)
+                        onCreateReportClick()
+                    }
+                    TemplateOptionItem("ISO 45001 - Mantenimiento Mecánico Preventivo") {
+                        homeViewModel.toggleTemplatesDialog(false)
+                        onCreateReportClick()
+                    }
+                }
+            },
+            confirmButton = {
+                OutlinedButton(onClick = { homeViewModel.toggleTemplatesDialog(false) }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun TemplateOptionItem(
+    title: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(cornerRadius = 12.dp)
+            .clickable { onClick() }
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -293,10 +448,10 @@ private fun RecentActivityItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                val icon = when (report.category.uppercase()) {
-                    "INSPECCIÓN" -> "📋"
-                    "MANTENIMIENTO" -> "🔧"
-                    else -> "🛡️"
+                val iconVector = when (report.category.uppercase()) {
+                    "INSPECCIÓN" -> Icons.Outlined.Edit
+                    "MANTENIMIENTO" -> Icons.Outlined.Info
+                    else -> Icons.Outlined.Check
                 }
                 Box(
                     modifier = Modifier
@@ -304,7 +459,12 @@ private fun RecentActivityItemCard(
                         .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(icon, fontSize = 20.sp)
+                    Icon(
+                        imageVector = iconVector,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -349,7 +509,7 @@ private fun RecentActivityItemCard(
 private fun ModuleCard(
     title: String,
     subtitle: String,
-    iconText: String,
+    icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -366,7 +526,12 @@ private fun ModuleCard(
                     .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(iconText, fontSize = 20.sp)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(

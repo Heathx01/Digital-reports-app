@@ -18,8 +18,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -34,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.navigation.Screen
@@ -79,7 +85,7 @@ fun BitacoraScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Search Input
+            // Search Input with Outlined Line Art Search Icon
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,8 +96,14 @@ fun BitacoraScreen(
                     value = uiState.searchQuery,
                     onValueChange = viewModel::onSearchQueryChanged,
                     placeholder = { Text("Buscar por código o título...") },
-                    leadingIcon = { Text("🔍") },
-                    trailingIcon = { Text("🎚️") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Buscar",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -174,19 +186,24 @@ private fun BitacoraCardItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                val (bgColor, iconText) = when (report.category.uppercase()) {
-                    "INSPECCIÓN" -> Color(0xFFD1FAE5) to "📋"
-                    "MANTENIMIENTO" -> Color(0xFFDBEAFE) to "🔧"
-                    else -> Color(0xFFFEF3C7) to "🛡️"
+                val iconVector = when (report.category.uppercase()) {
+                    "INSPECCIÓN" -> Icons.Outlined.Edit
+                    "MANTENIMIENTO" -> Icons.Outlined.Info
+                    else -> Icons.Outlined.Check
                 }
 
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .background(bgColor, RoundedCornerShape(12.dp)),
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(iconText, fontSize = 20.sp)
+                    Icon(
+                        imageVector = iconVector,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -210,7 +227,12 @@ private fun BitacoraCardItem(
             Column(
                 horizontalAlignment = Alignment.End
             ) {
-                Text("⋮", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val isCompleted = report.status == "COMPLETADO"
