@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.ui.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -25,9 +27,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
+import com.example.digital_reports_app.util.BiometricAuthManager
+import com.example.digital_reports_app.util.BiometricAuthResult
 
 @Composable
 fun LoginScreen(
@@ -36,10 +41,42 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
 
     if (uiState.isLoggedIn) {
         LaunchedEffect(Unit) {
             onNavigateToHome()
+        }
+    }
+
+    val triggerLoginWithBiometrics: () -> Unit = {
+        focusManager.clearFocus()
+        if (activity != null) {
+            val biometricAuthManager = BiometricAuthManager(activity)
+            if (biometricAuthManager.canAuthenticate()) {
+                biometricAuthManager.showBiometricPrompt(
+                    title = "Firma Biométrica DocuField",
+                    subtitle = "Confirmación de seguridad nativa",
+                    description = "Confirma tu identidad con tu huella, rostro o PIN para continuar"
+                ) { result ->
+                    when (result) {
+                        is BiometricAuthResult.Success -> {
+                            viewModel.login()
+                        }
+                        is BiometricAuthResult.Error -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            viewModel.login()
+                        }
+                    }
+                }
+            } else {
+                viewModel.login()
+            }
+        } else {
+            viewModel.login()
         }
     }
 
@@ -206,8 +243,7 @@ fun LoginScreen(
                             ),
                             keyboardActions = KeyboardActions(
                                 onDone = {
-                                    focusManager.clearFocus()
-                                    viewModel.login()
+                                    triggerLoginWithBiometrics()
                                 }
                             ),
                             modifier = Modifier.fillMaxWidth(),
@@ -220,17 +256,16 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Primary Login Button
                         val isSubmitEnabled = uiState.userCode.isNotBlank() &&
                                 uiState.password.isNotBlank() &&
                                 uiState.userCodeError == null &&
                                 uiState.passwordError == null &&
                                 !uiState.isLoading
 
+                        // Primary Login Button
                         Button(
                             onClick = {
-                                focusManager.clearFocus()
-                                viewModel.login()
+                                triggerLoginWithBiometrics()
                             },
                             enabled = isSubmitEnabled,
                             modifier = Modifier
@@ -254,6 +289,22 @@ fun LoginScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
+                            }
+                        }
+
+                        // Native Biometric Quick Auth Option
+                        if (activity != null && BiometricAuthManager(activity).canAuthenticate()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    triggerLoginWithBiometrics()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(24.dp)
+                            ) {
+                                Text("🖐️ Acceso Nativo (Huella / Rostro / PIN)", fontWeight = FontWeight.SemiBold)
                             }
                         }
 
