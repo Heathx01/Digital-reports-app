@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.digital_reports_app.ui.auth.LoginScreen
 import com.example.digital_reports_app.ui.home.HomeScreen
+import com.example.digital_reports_app.ui.profile.ProfileScreen
 import com.example.digital_reports_app.ui.report.CreateReportScreen
 import com.example.digital_reports_app.ui.report.ReportDetailScreen
 
@@ -17,6 +18,7 @@ object Screen {
     const val HOME = "home"
     const val CREATE_REPORT = "create_report"
     const val REPORT_DETAIL = "report_detail/{reportId}"
+    const val PROFILE = "profile"
 
     fun reportDetailRoute(reportId: String) = "report_detail/$reportId"
 }
@@ -51,6 +53,9 @@ fun AppNavigation(
                 },
                 onReportClick = { reportId ->
                     navController.navigate(Screen.reportDetailRoute(reportId))
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.PROFILE)
                 }
             )
         }
@@ -66,6 +71,13 @@ fun AppNavigation(
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })
         ) {
             ReportDetailScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.PROFILE) {
+            ProfileScreen(
                 onBack = {
                     navController.popBackStack()
                 }

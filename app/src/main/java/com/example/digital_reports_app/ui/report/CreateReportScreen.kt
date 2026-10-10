@@ -31,11 +31,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.digital_reports_app.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,9 +46,15 @@ fun CreateReportScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var dropdownExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
+            NotificationHelper.showNotification(
+                context,
+                "Reporte Creado Exitosamente",
+                "El reporte '${uiState.title}' ha sido registrado en el sistema."
+            )
             onBack()
         }
     }

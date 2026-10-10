@@ -53,6 +53,7 @@ fun HomeScreen(
     onLogout: () -> Unit,
     onCreateReportClick: () -> Unit,
     onReportClick: (String) -> Unit,
+    onProfileClick: () -> Unit,
     homeViewModel: HomeViewModel = hiltViewModel(),
     reportListViewModel: ReportListViewModel = hiltViewModel()
 ) {
@@ -87,6 +88,12 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "🔄 Sincronizar",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    TextButton(onClick = onProfileClick) {
+                        Text(
+                            text = "👤 Perfil",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -130,7 +137,8 @@ fun HomeScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clickable { onProfileClick() },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
