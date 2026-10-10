@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
+import com.example.digital_reports_app.util.DocumentScannerHelper
 import com.example.digital_reports_app.util.NotificationHelper
 
 data class ReportTemplateItem(
@@ -80,7 +81,7 @@ fun FormTemplateScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Dynamic Templates List (Support Create & Edit Template)
+    // Dynamic Templates List (Support Scan, Create & Edit Template)
     val templates = remember {
         mutableStateListOf(
             ReportTemplateItem(
@@ -117,8 +118,9 @@ fun FormTemplateScreen(
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var showCreateTemplateDialog by remember { mutableStateOf(false) }
+    var showScanDocumentDialog by remember { mutableStateOf(false) }
 
-    // Dialog state for New Template
+    // Dialog state for New Template / Scan
     var newTemplateTitle by remember { mutableStateOf("") }
     var newTemplateCategory by remember { mutableStateOf("Inspección") }
     var newTemplateDescription by remember { mutableStateOf("") }
@@ -155,7 +157,7 @@ fun FormTemplateScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (selectedTemplate == null) "Selecciona, edita o crea una plantilla para tu empresa" else "Paso 2: Rellena los datos para generar el reporte",
+                            text = if (selectedTemplate == null) "Selecciona, escanea o crea una plantilla" else "Paso 2: Rellena los datos para generar el reporte",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -191,7 +193,7 @@ fun FormTemplateScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            // STEP 1: SELECT, CREATE OR EDIT TEMPLATE
+            // STEP 1: SELECT, SCAN, CREATE OR EDIT TEMPLATE
             if (selectedTemplate == null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -205,25 +207,40 @@ fun FormTemplateScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    // Button to create a new template
-                    Button(
-                        onClick = {
-                            newTemplateTitle = ""
-                            newTemplateCategory = "Inspección"
-                            newTemplateDescription = ""
-                            showCreateTemplateDialog = true
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Nueva Plantilla", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Scan Document Button
+                        OutlinedButton(
+                            onClick = {
+                                newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
+                                newTemplateCategory = "Inspección"
+                                newTemplateDescription = "Plantilla extraída por análisis de documento físico."
+                                showScanDocumentDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("📷 Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Create New Template Button
+                        Button(
+                            onClick = {
+                                newTemplateTitle = ""
+                                newTemplateCategory = "Inspección"
+                                newTemplateDescription = ""
+                                showCreateTemplateDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text("Nueva", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
 
@@ -283,7 +300,6 @@ fun FormTemplateScreen(
                                     }
                                 }
 
-                                // Edit button for this template
                                 TextButton(
                                     onClick = { templateToEdit = template }
                                 ) {
@@ -514,6 +530,61 @@ fun FormTemplateScreen(
                 }
             }
         }
+    }
+
+    // SCAN PHYSICAL DOCUMENT DIALOG
+    if (showScanDocumentDialog) {
+        AlertDialog(
+            onDismissRequest = { showScanDocumentDialog = false },
+            title = { Text("Escaneo de Documento Físico", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Procesando documento impreso con cámara/PDF para extraer campos automáticamente...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = newTemplateTitle,
+                        onValueChange = { newTemplateTitle = it },
+                        label = { Text("Nombre para la Plantilla Escaneada *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTemplateCategory,
+                        onValueChange = { newTemplateCategory = it },
+                        label = { Text("Categoría (ej. Inspección, Mantenimiento)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newTemplateTitle.isNotBlank()) {
+                            val scannedTpl = DocumentScannerHelper.createTemplateFromScan(
+                                templateTitle = newTemplateTitle,
+                                category = newTemplateCategory,
+                                description = "Plantilla extraída mediante escaneo de documento físico impreso."
+                            )
+                            templates.add(0, scannedTpl)
+                            showScanDocumentDialog = false
+                            Toast.makeText(context, "Plantilla escaneada '${scannedTpl.title}' lista", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Analizar y Crear Plantilla", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showScanDocumentDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     // CREATE NEW TEMPLATE DIALOG
