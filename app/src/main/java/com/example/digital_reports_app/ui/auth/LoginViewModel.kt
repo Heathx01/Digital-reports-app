@@ -33,7 +33,7 @@ class LoginViewModel @Inject constructor(
     fun onUserCodeChanged(userCode: String) {
         val trimmed = userCode.trim()
         val error = when {
-            trimmed.isNotEmpty() && trimmed.length < 3 -> "El código debe tener al menos 3 caracteres."
+            trimmed.isNotEmpty() && trimmed.length < 6 -> "El código de trabajador debe tener al menos 6 caracteres."
             else -> null
         }
         _uiState.update { 
@@ -47,7 +47,10 @@ class LoginViewModel @Inject constructor(
 
     fun onPasswordChanged(password: String) {
         val error = when {
-            password.isNotEmpty() && password.length < 4 -> "La contraseña debe tener al menos 4 caracteres."
+            password.isNotEmpty() && password.length < 8 -> "La contraseña debe tener al menos 8 caracteres."
+            password.isNotEmpty() && !password.any { it.isUpperCase() } -> "Debe incluir al menos una letra mayúscula."
+            password.isNotEmpty() && !password.any { it.isDigit() } -> "Debe incluir al menos un número."
+            password.isNotEmpty() && !password.any { !it.isLetterOrDigit() } -> "Debe incluir al menos un carácter especial (#, $, !, etc.)."
             else -> null
         }
         _uiState.update { 
@@ -73,19 +76,26 @@ class LoginViewModel @Inject constructor(
 
         var isValid = true
 
-        if (userCode.isBlank()) {
-            _uiState.update { it.copy(userCodeError = "Por favor ingresa tu código de trabajador.") }
-            isValid = false
-        } else if (userCode.length < 3) {
-            _uiState.update { it.copy(userCodeError = "El código debe tener al menos 3 caracteres.") }
+        val userCodeErr = when {
+            userCode.isBlank() -> "Por favor ingresa tu código de trabajador."
+            userCode.length < 6 -> "El código de trabajador debe tener al menos 6 caracteres."
+            else -> null
+        }
+        if (userCodeErr != null) {
+            _uiState.update { it.copy(userCodeError = userCodeErr) }
             isValid = false
         }
 
-        if (password.isBlank()) {
-            _uiState.update { it.copy(passwordError = "Por favor ingresa tu contraseña.") }
-            isValid = false
-        } else if (password.length < 4) {
-            _uiState.update { it.copy(passwordError = "La contraseña debe tener al menos 4 caracteres.") }
+        val passwordErr = when {
+            password.isBlank() -> "Por favor ingresa tu contraseña."
+            password.length < 8 -> "La contraseña debe tener al menos 8 caracteres."
+            !password.any { it.isUpperCase() } -> "La contraseña debe incluir al menos una letra mayúscula."
+            !password.any { it.isDigit() } -> "La contraseña debe incluir al menos un número."
+            !password.any { !it.isLetterOrDigit() } -> "La contraseña debe incluir al menos un carácter especial."
+            else -> null
+        }
+        if (passwordErr != null) {
+            _uiState.update { it.copy(passwordError = passwordErr) }
             isValid = false
         }
 
