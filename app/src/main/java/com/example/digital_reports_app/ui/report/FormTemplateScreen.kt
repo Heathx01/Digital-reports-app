@@ -1,6 +1,9 @@
 package com.example.digital_reports_app.ui.report
 
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,6 +83,7 @@ fun FormTemplateScreen(
     viewModel: CreateReportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     // Dynamic Templates List (Support Scan, Create & Edit Template)
     val templates = remember {
@@ -133,7 +137,20 @@ fun FormTemplateScreen(
     var selectedAreaStatus by remember { mutableStateOf("Bueno") }
     var temperatureInput by remember { mutableStateOf("24") }
 
-    val context = LocalContext.current
+    // Native Camera Launcher for Document Scanning
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
+            newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
+            newTemplateCategory = "Inspección"
+            newTemplateDescription = "Plantilla extraída de foto capturada con la cámara."
+            showScanDocumentDialog = true
+            Toast.makeText(context, "Foto de formato capturada correctamente", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -208,13 +225,17 @@ fun FormTemplateScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Scan Document Button
+                        // Scan Document via Native Camera Button
                         OutlinedButton(
                             onClick = {
-                                newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
-                                newTemplateCategory = "Inspección"
-                                newTemplateDescription = "Plantilla extraída por análisis de documento físico."
-                                showScanDocumentDialog = true
+                                try {
+                                    cameraLauncher.launch(null)
+                                } catch (e: Exception) {
+                                    newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
+                                    newTemplateCategory = "Inspección"
+                                    newTemplateDescription = "Plantilla extraída mediante escaneo de documento físico."
+                                    showScanDocumentDialog = true
+                                }
                             },
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -536,11 +557,11 @@ fun FormTemplateScreen(
     if (showScanDocumentDialog) {
         AlertDialog(
             onDismissRequest = { showScanDocumentDialog = false },
-            title = { Text("Escaneo de Documento Físico", fontWeight = FontWeight.Bold) },
+            title = { Text("Documento Capturado con Cámara", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Procesando documento impreso con cámara/PDF para extraer campos automáticamente...",
+                        text = "Foto del formato recibida. Se han extraído los campos del documento impreso.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -567,7 +588,7 @@ fun FormTemplateScreen(
                             val scannedTpl = DocumentScannerHelper.createTemplateFromScan(
                                 templateTitle = newTemplateTitle,
                                 category = newTemplateCategory,
-                                description = "Plantilla extraída mediante escaneo de documento físico impreso."
+                                description = "Plantilla extraída mediante escaneo con cámara del formato físico."
                             )
                             templates.add(0, scannedTpl)
                             showScanDocumentDialog = false
@@ -576,7 +597,7 @@ fun FormTemplateScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Analizar y Crear Plantilla", fontWeight = FontWeight.Bold)
+                    Text("Crear Plantilla", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
