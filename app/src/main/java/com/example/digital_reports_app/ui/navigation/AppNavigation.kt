@@ -1,5 +1,9 @@
 package com.example.digital_reports_app.ui.navigation
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -38,7 +42,11 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        enterTransition = { slideInHorizontally(initialOffsetX = { 700 }) + fadeIn() },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -700 }) + fadeOut() },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -700 }) + fadeIn() },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { 700 }) + fadeOut() }
     ) {
         composable(Screen.LOGIN) {
             LoginScreen(
@@ -129,6 +137,11 @@ fun AppNavigation(
             ProfileScreen(
                 onBack = {
                     navController.popBackStack()
+                },
+                onLogout = {
+                    navController.navigate(Screen.LOGIN) {
+                        popUpTo(Screen.HOME) { inclusive = true }
+                    }
                 }
             )
         }

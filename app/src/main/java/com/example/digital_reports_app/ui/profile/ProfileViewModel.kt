@@ -2,6 +2,7 @@ package com.example.digital_reports_app.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.digital_reports_app.data.local.SessionManager
 import com.example.digital_reports_app.data.local.dao.UserDao
 import com.example.digital_reports_app.data.local.entity.UserEntity
 import com.example.digital_reports_app.data.repository.AuthRepository
@@ -16,33 +17,59 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val currentUser: UserEntity? = null,
+    val isDarkTheme: Boolean = false,
+    val selectedLanguage: String = "Español",
     val currentPasswordInput: String = "",
     val newPasswordInput: String = "",
     val isLoading: Boolean = false,
     val successMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isLoggedOut: Boolean = false
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        loadUser()
+        loadData()
     }
 
-    private fun loadUser() {
+    private fun loadData() {
         viewModelScope.launch {
             val userId = authRepository.getCurrentUserId().first()
             if (userId != null) {
                 val user = authRepository.getUserById(userId)
                 _uiState.update { it.copy(currentUser = user) }
             }
+
+            sessionManager.isDarkTheme.collect { isDark ->
+                _uiState.update { it.copy(isDarkTheme = isDark) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.appLanguage.collect { lang ->
+                _uiState.update { it.copy(selectedLanguage = lang) }
+            }
+        }
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setDarkTheme(isDark)
+        }
+    }
+
+    fun setLanguage(language: String) {
+        viewModelScope.launch {
+            sessionManager.setAppLanguage(language)
         }
     }
 
@@ -88,6 +115,13 @@ class ProfileViewModel @Inject constructor(
                     successMessage = "¡Contraseña actualizada con éxito!"
                 )
             }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            authRepository.logout()
+            _uiState.update { it.copy(isLoggedOut = true) }
         }
     }
 }

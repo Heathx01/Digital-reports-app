@@ -1,6 +1,7 @@
 package com.example.digital_reports_app.data.local
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -20,6 +21,8 @@ class SessionManager @Inject constructor(
         private val KEY_USER_ID = stringPreferencesKey("current_user_id")
         private val KEY_USER_NAME = stringPreferencesKey("current_user_name")
         private val KEY_USER_CODE = stringPreferencesKey("current_user_code")
+        private val KEY_IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
+        private val KEY_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     val currentUserId: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -32,6 +35,26 @@ class SessionManager @Inject constructor(
 
     val currentUserCode: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[KEY_USER_CODE]
+    }
+
+    val isDarkTheme: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_IS_DARK_THEME] ?: false
+    }
+
+    val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_LANGUAGE] ?: "Español"
+    }
+
+    suspend fun setDarkTheme(isDark: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_IS_DARK_THEME] = isDark
+        }
+    }
+
+    suspend fun setAppLanguage(language: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_LANGUAGE] = language
+        }
     }
 
     suspend fun saveSession(userId: String, name: String, userCode: String) {
