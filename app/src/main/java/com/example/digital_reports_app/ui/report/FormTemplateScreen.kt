@@ -485,7 +485,7 @@ fun FormTemplateScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("Cambiar Plantilla")
+                        Text("Cancelar")
                     }
 
                     Button(
