@@ -8,8 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = WorkProBluePrimary,
-    onPrimary = Color.White,
+    primary = DarkPrimary,
+    onPrimary = DarkBackground,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurfaceVariant,
@@ -19,7 +19,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = WorkProBluePrimary,
+    primary = LightPrimary,
     onPrimary = Color.White,
     background = LightBackground,
     surface = LightSurface,

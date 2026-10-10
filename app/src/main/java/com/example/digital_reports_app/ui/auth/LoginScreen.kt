@@ -1,4 +1,4 @@
-package com.example.digital_reports_app.ui.auth
+﻿package com.example.digital_reports_app.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +40,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.digital_reports_app.ui.theme.WorkProBluePrimary
 
 @Composable
 fun LoginScreen(
@@ -81,7 +80,7 @@ fun LoginScreen(
                     Box(
                         modifier = Modifier
                             .size(72.dp)
-                            .background(WorkProBluePrimary, shape = RoundedCornerShape(20.dp)),
+                            .background(MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(20.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -124,14 +123,14 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = uiState.userCode,
                         onValueChange = viewModel::onUserCodeChanged,
-                        placeholder = { Text("ejemplo@correo.com o 215800") },
+                        placeholder = { Text("ej. 215800") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(26.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -176,7 +175,7 @@ fun LoginScreen(
                             }
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(26.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -217,9 +216,9 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(26.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = WorkProBluePrimary
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
                         if (uiState.isLoading) {
@@ -256,7 +255,7 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(26.dp)
                     ) {
                         Text(
                             text = "Cancelar",
@@ -278,3 +277,4 @@ fun LoginScreen(
         }
     }
 }
+

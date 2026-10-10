@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
-import com.example.digital_reports_app.ui.theme.WorkProBluePrimary
 import com.example.digital_reports_app.util.PdfReportGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -165,7 +164,7 @@ fun ExportShareScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WorkProBluePrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Ver PDF", color = Color.White, fontWeight = FontWeight.Bold)
             }

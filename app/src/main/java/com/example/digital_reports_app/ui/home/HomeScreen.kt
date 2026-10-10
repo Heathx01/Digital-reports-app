@@ -48,7 +48,6 @@ import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.report.ReportListViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
-import com.example.digital_reports_app.ui.theme.WorkProBluePrimary
 import com.example.digital_reports_app.worker.SyncReportsWorker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,7 +140,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = WorkProBluePrimary
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Column(

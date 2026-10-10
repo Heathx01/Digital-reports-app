@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.digital_reports_app.ui.theme.WorkProBluePrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,12 +112,12 @@ fun BiometricConfirmScreen(
                         modifier = Modifier
                             .size(160.dp)
                             .background(
-                                color = WorkProBluePrimary.copy(alpha = 0.1f),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                 shape = CircleShape
                             )
                             .border(
                                 width = 3.dp,
-                                color = WorkProBluePrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center

@@ -45,7 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.digital_reports_app.ui.theme.WorkProBluePrimary
 import com.example.digital_reports_app.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,7 +125,7 @@ fun FormTemplateScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(
-                                    if (isActive) WorkProBluePrimary else MaterialTheme.colorScheme.surfaceVariant,
+                                    if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -295,7 +294,7 @@ fun FormTemplateScreen(
                         .weight(1f)
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WorkProBluePrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
