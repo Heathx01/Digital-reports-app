@@ -1,5 +1,7 @@
 package com.example.digital_reports_app.ui.report
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
@@ -137,18 +140,63 @@ fun FormTemplateScreen(
     var selectedAreaStatus by remember { mutableStateOf("Bueno") }
     var temperatureInput by remember { mutableStateOf("24") }
 
-    // Native Camera Launcher for Document Scanning
+    // 1. Camera TakePicturePreview Launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
             newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
             newTemplateCategory = "Inspección"
-            newTemplateDescription = "Plantilla extraída de foto capturada con la cámara."
+            newTemplateDescription = "Plantilla extraída mediante captura de cámara de formato físico."
             showScanDocumentDialog = true
-            Toast.makeText(context, "Foto de formato capturada correctamente", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Foto de formato capturada con éxito", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 2. Camera Runtime Permission Launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            try {
+                cameraLauncher.launch(null)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error al abrir la cámara: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            Toast.makeText(context, "Se requiere permiso de cámara para escanear formatos físicos.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // 3. Storage File/PDF/Image Picker Fallback
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            newTemplateTitle = "Formato Cargado #${templates.size + 1}"
+            newTemplateCategory = "Inspección"
+            newTemplateDescription = "Plantilla extraída de archivo escaneado PDF/Imagen."
+            showScanDocumentDialog = true
+            Toast.makeText(context, "Documento cargado correctamente", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val triggerCameraOrScan = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            try {
+                cameraLauncher.launch(null)
+            } catch (_: Exception) {
+                filePickerLauncher.launch("image/*")
+            }
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -228,14 +276,7 @@ fun FormTemplateScreen(
                         // Scan Document via Native Camera Button
                         OutlinedButton(
                             onClick = {
-                                try {
-                                    cameraLauncher.launch(null)
-                                } catch (e: Exception) {
-                                    newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
-                                    newTemplateCategory = "Inspección"
-                                    newTemplateDescription = "Plantilla extraída mediante escaneo de documento físico."
-                                    showScanDocumentDialog = true
-                                }
+                                triggerCameraOrScan()
                             },
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -557,7 +598,7 @@ fun FormTemplateScreen(
     if (showScanDocumentDialog) {
         AlertDialog(
             onDismissRequest = { showScanDocumentDialog = false },
-            title = { Text("Documento Capturado con Cámara", fontWeight = FontWeight.Bold) },
+            title = { Text("Documento Capturado", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
@@ -588,7 +629,7 @@ fun FormTemplateScreen(
                             val scannedTpl = DocumentScannerHelper.createTemplateFromScan(
                                 templateTitle = newTemplateTitle,
                                 category = newTemplateCategory,
-                                description = "Plantilla extraída mediante escaneo con cámara del formato físico."
+                                description = "Plantilla extraída mediante captura de cámara del formato físico."
                             )
                             templates.add(0, scannedTpl)
                             showScanDocumentDialog = false
