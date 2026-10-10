@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.ui.home
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,11 +37,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.report.ReportListViewModel
+import com.example.digital_reports_app.worker.SyncReportsWorker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +58,7 @@ fun HomeScreen(
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
     val reportUiState by reportListViewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(homeUiState.isLoggedOut) {
         if (homeUiState.isLoggedOut) {
@@ -72,6 +78,18 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    TextButton(
+                        onClick = {
+                            val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
+                            WorkManager.getInstance(context).enqueue(syncRequest)
+                            Toast.makeText(context, "Sincronización en segundo plano iniciada", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(
+                            text = "🔄 Sincronizar",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     TextButton(onClick = { homeViewModel.logout() }) {
                         Text(
                             text = "Salir",
