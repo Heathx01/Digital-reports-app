@@ -1,6 +1,5 @@
 package com.example.digital_reports_app.ui.home
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Edit
@@ -32,7 +30,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,7 +66,6 @@ fun HomeScreen(
     onReportClick: (String) -> Unit,
     onProfileClick: () -> Unit,
     onBitacoraClick: () -> Unit,
-    onPendingReportsClick: () -> Unit = onBitacoraClick,
     homeViewModel: HomeViewModel = hiltViewModel(),
     reportListViewModel: ReportListViewModel = hiltViewModel()
 ) {
@@ -92,9 +88,8 @@ fun HomeScreen(
         bottomBar = {
             WorkProBottomNavBar(
                 currentRoute = Screen.HOME,
-                onTabSelected = { tabTarget ->
-                    when (tabTarget) {
-                        "PENDIENTES" -> onPendingReportsClick()
+                onTabSelected = { route ->
+                    when (route) {
                         Screen.CREATE_REPORT -> onCreateReportClick()
                         Screen.BITACORA, Screen.REPORTS_LIST -> onBitacoraClick()
                         Screen.PROFILE -> onProfileClick()
@@ -151,7 +146,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // Indicator Badge for unsynced pending reports
                     if (pendingCount > 0) {
                         Box(
                             modifier = Modifier
@@ -165,7 +159,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Summary Card (Resumen General Liquid Glass)
+            // Summary Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +180,6 @@ fun HomeScreen(
                             color = Color.White
                         )
 
-                        // Point 2: Dynamic Connectivity Status Badge
                         val networkStatusText = if (homeUiState.isOnline) "EN LÍNEA" else "OFFLINE (BÚFER SEGURO)"
                         val networkBadgeBg = if (homeUiState.isOnline) Color(0x3322C55E) else Color(0x33F59E0B)
 
@@ -247,7 +240,7 @@ fun HomeScreen(
                         .padding(20.dp)
                 ) {
                     Text(
-                        text = "Aún no hay actividad reciente.\nCrea un nuevo reporte desde las opciones.",
+                        text = "Aún no hay actividad reciente.\nSelecciona una plantilla para crear tu primer reporte.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -261,9 +254,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Módulos Grid
+            // Módulo Principal: Crear Reporte desde Plantilla
             Text(
-                text = "Módulos de Inspección",
+                text = "Crear Nuevo Reporte",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -271,32 +264,62 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            // Single unified Action Card for Chronological Flow
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .clickable { onCreateReportClick() }
+                    .padding(20.dp)
             ) {
-                // Nuevo Reporte en blanco
-                ModuleCard(
-                    title = "Nuevo Reporte",
-                    subtitle = "Crear reporte técnico",
-                    icon = Icons.Outlined.Add,
-                    onClick = onCreateReportClick,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DateRange,
+                                contentDescription = "Seleccionar Plantilla",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
 
-                // Point 3: Plantillas ISO con selector
-                ModuleCard(
-                    title = "Plantillas ISO",
-                    subtitle = "Formatos homologados",
-                    icon = Icons.Outlined.DateRange,
-                    onClick = { homeViewModel.toggleTemplatesDialog(true) },
-                    modifier = Modifier.weight(1f)
-                )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = "Seleccionar Plantilla",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Elige una plantilla predefinida para editar y generar tu reporte",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Text("›", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 
-    // Point 1: Notifications Modal Dialog
+    // Notifications Modal Dialog
     if (homeUiState.showNotificationsDialog) {
         AlertDialog(
             onDismissRequest = { homeViewModel.toggleNotificationsDialog(false) },
@@ -344,68 +367,6 @@ fun HomeScreen(
                 }
             }
         )
-    }
-
-    // Point 3: ISO Templates Selector Modal Dialog
-    if (homeUiState.showTemplatesDialog) {
-        AlertDialog(
-            onDismissRequest = { homeViewModel.toggleTemplatesDialog(false) },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.DateRange,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Plantillas Homologadas ISO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TemplateOptionItem("ISO 9001 - Inspección Diurna Planta") {
-                        homeViewModel.toggleTemplatesDialog(false)
-                        onCreateReportClick()
-                    }
-                    TemplateOptionItem("ISO 14001 - Control Ambiental y Gas") {
-                        homeViewModel.toggleTemplatesDialog(false)
-                        onCreateReportClick()
-                    }
-                    TemplateOptionItem("ISO 45001 - Mantenimiento Mecánico Preventivo") {
-                        homeViewModel.toggleTemplatesDialog(false)
-                        onCreateReportClick()
-                    }
-                }
-            },
-            confirmButton = {
-                OutlinedButton(onClick = { homeViewModel.toggleTemplatesDialog(false) }) {
-                    Text("Cerrar")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun TemplateOptionItem(
-    title: String,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlass(cornerRadius = 12.dp)
-            .clickable { onClick() }
-            .padding(14.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
-        }
     }
 }
 
@@ -501,51 +462,6 @@ private fun RecentActivityItemCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ModuleCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .liquidGlass(cornerRadius = 18.dp, prominent = true)
-            .clickable { onClick() }
-            .padding(16.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
@@ -26,13 +25,11 @@ import com.example.digital_reports_app.ui.theme.liquidGlass
 data class BottomNavItem(
     val route: String,
     val title: String,
-    val icon: ImageVector,
-    val isPendingFilter: Boolean = false
+    val icon: ImageVector
 )
 
 val bottomNavItems = listOf(
     BottomNavItem(Screen.HOME, "Inicio", Icons.Outlined.Home),
-    BottomNavItem(Screen.BITACORA, "Reportes", Icons.Outlined.Create, isPendingFilter = true),
     BottomNavItem(Screen.CREATE_REPORT, "Plantillas", Icons.Outlined.DateRange),
     BottomNavItem(Screen.BITACORA, "Bitácora", Icons.AutoMirrored.Outlined.List),
     BottomNavItem(Screen.PROFILE, "Ajustes", Icons.Outlined.Settings)
@@ -57,7 +54,7 @@ fun WorkProBottomNavBar(
                 val isSelected = currentRoute == item.route
                 NavigationBarItem(
                     selected = isSelected,
-                    onClick = { onTabSelected(if (item.isPendingFilter) "PENDIENTES" else item.route) },
+                    onClick = { onTabSelected(item.route) },
                     icon = {
                         Icon(
                             imageVector = item.icon,
