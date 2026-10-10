@@ -1,4 +1,4 @@
-package com.example.digital_reports_app.ui.profile
+﻿package com.example.digital_reports_app.ui.profile
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -56,6 +56,8 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val userName = uiState.currentUser?.name ?: "Usuario"
+    val userCode = uiState.currentUser?.workerCode ?: "---"
     val context = LocalContext.current
 
     if (uiState.isLoggedOut) {
@@ -153,7 +155,7 @@ fun ProfileScreen(
                             Toast.makeText(context, "Navegar a Editar Perfil", Toast.LENGTH_SHORT).show()
                         }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Dark Mode Toggle
                     SettingItemToggle(
@@ -161,7 +163,7 @@ fun ProfileScreen(
                         checked = uiState.isDarkTheme,
                         onCheckedChange = { viewModel.setDarkTheme(it) }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Language
                     SettingItemValue(
@@ -172,7 +174,7 @@ fun ProfileScreen(
                             viewModel.setLanguage(newLang)
                         }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Background Sync
                     SettingItemToggle(
@@ -271,3 +273,7 @@ fun SettingItemToggle(title: String, checked: Boolean, onCheckedChange: (Boolean
         )
     }
 }
+
+
+
+
