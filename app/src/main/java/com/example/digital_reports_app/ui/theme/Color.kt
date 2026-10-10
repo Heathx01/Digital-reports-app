@@ -2,26 +2,34 @@ package com.example.digital_reports_app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Colors (from UI Prototype)
-val PrimaryBlue = Color(0xFF1967D2)
-val PrimaryBlueDark = Color(0xFF0D6EFD)
+// WorkPro Brand Colors
+val WorkProBluePrimary = Color(0xFF0052FF)
+val WorkProBlueLight = Color(0xFF1E60F9)
+val WorkProBlueDark = Color(0xFF0041CC)
 
-// Light Theme Palettes
-val LightBackground = Color(0xFFF8F9FA)
+// Light Theme Colors
+val LightBackground = Color(0xFFF4F6F9)
 val LightSurface = Color(0xFFFFFFFF)
-val LightOnSurface = Color(0xFF101828)
-val LightOnSurfaceVariant = Color(0xFF475467)
-val LightOutline = Color(0xFFD0D5DD)
+val LightSurfaceVariant = Color(0xFFEFEFF4)
+val LightOnSurface = Color(0xFF1C1C1E)
+val LightOnSurfaceVariant = Color(0xFF6E6E73)
 
-// Dark Theme Palettes
-val DarkBackground = Color(0xFF0B1220)
-val DarkSurface = Color(0xFF162238)
-val DarkOnSurface = Color(0xFFF8F9FA)
-val DarkOnSurfaceVariant = Color(0xFF98A2B3)
-val DarkOutline = Color(0xFF344054)
+// Dark Theme Colors
+val DarkBackground = Color(0xFF0B101D)
+val DarkSurface = Color(0xFF141C2E)
+val DarkSurfaceVariant = Color(0xFF1E2A42)
+val DarkOnSurface = Color(0xFFF2F4F8)
+val DarkOnSurfaceVariant = Color(0xFF94A3B8)
 
-// Status Badges
-val StatusCompletedBg = Color(0xFFECFDF3)
-val StatusCompletedText = Color(0xFF027A48)
-val StatusPendingBg = Color(0xFFFFFAEB)
-val StatusPendingText = Color(0xFFB54708)
+// Status Colors
+val StatusSuccessGreen = Color(0xFF10B981)
+val StatusSuccessBgLight = Color(0xFFD1FAE5)
+val StatusSuccessBgDark = Color(0xFF064E3B)
+
+val StatusWarningAmber = Color(0xFFF59E0B)
+val StatusWarningBgLight = Color(0xFFFEF3C7)
+val StatusWarningBgDark = Color(0xFF78350F)
+
+val StatusInfoBlue = Color(0xFF3B82F6)
+val StatusInfoBgLight = Color(0xFFDBEAFE)
+val StatusInfoBgDark = Color(0xFF1E3A8A)

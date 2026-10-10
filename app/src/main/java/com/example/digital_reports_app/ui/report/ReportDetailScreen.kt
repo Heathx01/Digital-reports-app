@@ -47,11 +47,11 @@ import com.example.digital_reports_app.util.PdfReportGenerator
 @Composable
 fun ReportDetailScreen(
     onBack: () -> Unit,
+    onExportClick: (String) -> Unit = {},
     viewModel: ReportDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) {
@@ -204,8 +204,7 @@ fun ReportDetailScreen(
                         // Export PDF Button
                         Button(
                             onClick = {
-                                val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
-                                PdfReportGenerator.openPdfFile(context, pdfFile)
+                                onExportClick(report.reportId)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
