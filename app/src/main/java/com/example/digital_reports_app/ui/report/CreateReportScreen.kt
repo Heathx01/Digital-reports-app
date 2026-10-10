@@ -1,4 +1,4 @@
-package com.example.digital_reports_app.ui.report
+﻿package com.example.digital_reports_app.ui.report
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -103,7 +103,7 @@ fun CreateReportScreen(
                 label = { Text("Título del reporte") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(26.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -125,7 +125,7 @@ fun CreateReportScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { dropdownExpanded = true },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(26.dp)
                 )
 
                 DropdownMenu(
@@ -154,7 +154,7 @@ fun CreateReportScreen(
                 minLines = 4,
                 maxLines = 8,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(26.dp)
             )
 
             // Error Message
@@ -176,7 +176,7 @@ fun CreateReportScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(26.dp)
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -194,3 +194,4 @@ fun CreateReportScreen(
         }
     }
 }
+
