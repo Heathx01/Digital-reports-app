@@ -11,7 +11,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.digital_reports_app.ui.auth.BiometricConfirmScreen
 import com.example.digital_reports_app.ui.auth.LoginScreen
 import com.example.digital_reports_app.ui.home.HomeScreen
 import com.example.digital_reports_app.ui.profile.ProfileScreen
@@ -22,7 +21,6 @@ import com.example.digital_reports_app.ui.report.ReportDetailScreen
 
 object Screen {
     const val LOGIN = "login"
-    const val BIOMETRIC = "biometric"
     const val HOME = "home"
     const val REPORTS_LIST = "reports_list"
     const val CREATE_REPORT = "create_report"
@@ -51,19 +49,9 @@ fun AppNavigation(
         composable(Screen.LOGIN) {
             LoginScreen(
                 onNavigateToHome = {
-                    navController.navigate(Screen.BIOMETRIC)
-                }
-            )
-        }
-        composable(Screen.BIOMETRIC) {
-            BiometricConfirmScreen(
-                onConfirmSuccess = {
                     navController.navigate(Screen.HOME) {
                         popUpTo(Screen.LOGIN) { inclusive = true }
                     }
-                },
-                onBack = {
-                    navController.popBackStack()
                 }
             )
         }
