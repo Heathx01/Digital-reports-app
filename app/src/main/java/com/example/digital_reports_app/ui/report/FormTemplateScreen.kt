@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.ui.report
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,10 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,12 +40,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,41 +66,10 @@ import com.example.digital_reports_app.util.NotificationHelper
 
 data class ReportTemplateItem(
     val id: String,
-    val title: String,
-    val category: String,
-    val description: String,
-    val icon: ImageVector
-)
-
-val availableTemplates = listOf(
-    ReportTemplateItem(
-        id = "tpl_1",
-        title = "Inspección Diaria de Planta",
-        category = "Inspección",
-        description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
-        icon = Icons.Outlined.Edit
-    ),
-    ReportTemplateItem(
-        id = "tpl_2",
-        title = "Mantenimiento Preventivo de Maquinaria",
-        category = "Mantenimiento",
-        description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
-        icon = Icons.Outlined.Info
-    ),
-    ReportTemplateItem(
-        id = "tpl_3",
-        title = "Control de Seguridad e Higiene",
-        category = "Incidencia",
-        description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
-        icon = Icons.Outlined.Check
-    ),
-    ReportTemplateItem(
-        id = "tpl_4",
-        title = "Auditoría de Almacén y Embalaje",
-        category = "General",
-        description = "Revisión de inventarios, cajas y estado de carga de materiales.",
-        icon = Icons.Outlined.DateRange
-    )
+    var title: String,
+    var category: String,
+    var description: String,
+    val icon: ImageVector = Icons.Outlined.Edit
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,7 +79,51 @@ fun FormTemplateScreen(
     viewModel: CreateReportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Dynamic Templates List (Support Create & Edit Template)
+    val templates = remember {
+        mutableStateListOf(
+            ReportTemplateItem(
+                id = "tpl_1",
+                title = "Inspección Diaria de Planta",
+                category = "Inspección",
+                description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
+                icon = Icons.Outlined.Edit
+            ),
+            ReportTemplateItem(
+                id = "tpl_2",
+                title = "Mantenimiento Preventivo de Maquinaria",
+                category = "Mantenimiento",
+                description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
+                icon = Icons.Outlined.Info
+            ),
+            ReportTemplateItem(
+                id = "tpl_3",
+                title = "Control de Seguridad e Higiene",
+                category = "Incidencia",
+                description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
+                icon = Icons.Outlined.Check
+            ),
+            ReportTemplateItem(
+                id = "tpl_4",
+                title = "Auditoría de Almacén y Embalaje",
+                category = "General",
+                description = "Revisión de inventarios, cajas y estado de carga de materiales.",
+                icon = Icons.Outlined.DateRange
+            )
+        )
+    }
+
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
+    var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
+    var showCreateTemplateDialog by remember { mutableStateOf(false) }
+
+    // Dialog state for New Template
+    var newTemplateTitle by remember { mutableStateOf("") }
+    var newTemplateCategory by remember { mutableStateOf("Inspección") }
+    var newTemplateDescription by remember { mutableStateOf("") }
+
+    // Form fields for Step 2
     var locationExpanded by remember { mutableStateOf(false) }
     var areaStatusExpanded by remember { mutableStateOf(false) }
 
@@ -119,8 +137,8 @@ fun FormTemplateScreen(
         if (uiState.isSuccess) {
             NotificationHelper.showNotification(
                 context,
-                "Reporte Creado",
-                "El reporte '${uiState.title}' fue guardado en la bitácora."
+                "Reporte Creado y Guardado",
+                "El reporte '${uiState.title}' ha sido guardado en la bitácora."
             )
             onBack()
         }
@@ -132,12 +150,12 @@ fun FormTemplateScreen(
                 title = {
                     Column {
                         Text(
-                            text = if (selectedTemplate == null) "Seleccionar Plantilla" else "Editar y Llenar Plantilla",
+                            text = if (selectedTemplate == null) "Gestión de Plantillas" else "Llenar Formulario de Reporte",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (selectedTemplate == null) "Paso 1: Elige una plantilla base" else "Paso 2: Ingresa los datos del reporte",
+                            text = if (selectedTemplate == null) "Selecciona, edita o crea una plantilla para tu empresa" else "Paso 2: Rellena los datos para generar el reporte",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -173,18 +191,45 @@ fun FormTemplateScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            // STEP 1: SELECT TEMPLATE
+            // STEP 1: SELECT, CREATE OR EDIT TEMPLATE
             if (selectedTemplate == null) {
-                Text(
-                    text = "Plantillas Disponibles",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Plantillas de la Empresa",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                    // Button to create a new template
+                    Button(
+                        onClick = {
+                            newTemplateTitle = ""
+                            newTemplateCategory = "Inspección"
+                            newTemplateDescription = ""
+                            showCreateTemplateDialog = true
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Nueva Plantilla", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
 
-                availableTemplates.forEach { template ->
+                Spacer(modifier = Modifier.height(16.dp))
+
+                templates.forEach { template ->
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -196,61 +241,79 @@ fun FormTemplateScreen(
                             }
                             .padding(18.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Column {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                                    contentAlignment = Alignment.Center
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Icon(
-                                        imageVector = template.icon,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = template.icon,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Column {
+                                        Text(
+                                            text = template.title,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Categoría: ${template.category}",
+                                            style = TelemetryMonoStyle,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
 
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                Column {
-                                    Text(
-                                        text = template.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Categoría: ${template.category}",
-                                        style = TelemetryMonoStyle,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = template.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                // Edit button for this template
+                                TextButton(
+                                    onClick = { templateToEdit = template }
+                                ) {
+                                    Text("Editar", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 }
                             }
 
-                            Text("›", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = template.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Toca para usar esta plantilla y llenar el reporte →",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             } else {
-                // STEP 2: EDIT TEMPLATE & FILL REPORT FIELDS
+                // STEP 2: FILL FORM BASED ON SELECTED TEMPLATE
                 val currentTpl = selectedTemplate!!
 
                 // Selected Template Header Badge
@@ -305,7 +368,7 @@ fun FormTemplateScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Campos del Reporte",
+                            text = "Llenado de Datos del Reporte",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -431,7 +494,7 @@ fun FormTemplateScreen(
                                 viewModel.onTitleChanged(currentTpl.title)
                             }
                             if (uiState.description.isBlank()) {
-                                viewModel.onDescriptionChanged("Estado de área: $selectedAreaStatus. Temp: $temperatureInput °C. Inspección completada según plantilla.")
+                                viewModel.onDescriptionChanged("Estado de área: $selectedAreaStatus. Temp: $temperatureInput °C. Reporte registrado mediante plantilla.")
                             }
                             viewModel.createReport()
                         },
@@ -451,5 +514,126 @@ fun FormTemplateScreen(
                 }
             }
         }
+    }
+
+    // CREATE NEW TEMPLATE DIALOG
+    if (showCreateTemplateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateTemplateDialog = false },
+            title = { Text("Crear Nueva Plantilla", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = newTemplateTitle,
+                        onValueChange = { newTemplateTitle = it },
+                        label = { Text("Nombre de la Plantilla *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTemplateCategory,
+                        onValueChange = { newTemplateCategory = it },
+                        label = { Text("Categoría (ej. Inspección, Mantenimiento)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTemplateDescription,
+                        onValueChange = { newTemplateDescription = it },
+                        label = { Text("Descripción / Instrucciones") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newTemplateTitle.isNotBlank()) {
+                            val newTpl = ReportTemplateItem(
+                                id = "tpl_${System.currentTimeMillis()}",
+                                title = newTemplateTitle.trim(),
+                                category = newTemplateCategory.trim().ifBlank { "General" },
+                                description = newTemplateDescription.trim().ifBlank { "Plantilla personalizada de la empresa." },
+                                icon = Icons.Outlined.Edit
+                            )
+                            templates.add(0, newTpl)
+                            showCreateTemplateDialog = false
+                            Toast.makeText(context, "Plantilla '${newTpl.title}' creada con éxito", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Crear Plantilla", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCreateTemplateDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // EDIT TEMPLATE DIALOG
+    templateToEdit?.let { tpl ->
+        var editTitle by remember { mutableStateOf(tpl.title) }
+        var editCategory by remember { mutableStateOf(tpl.category) }
+        var editDescription by remember { mutableStateOf(tpl.description) }
+
+        AlertDialog(
+            onDismissRequest = { templateToEdit = null },
+            title = { Text("Editar Plantilla", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Nombre de la Plantilla") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editCategory,
+                        onValueChange = { editCategory = it },
+                        label = { Text("Categoría") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text("Descripción") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val index = templates.indexOfFirst { it.id == tpl.id }
+                        if (index != -1 && editTitle.isNotBlank()) {
+                            val updated = tpl.copy(
+                                title = editTitle.trim(),
+                                category = editCategory.trim(),
+                                description = editDescription.trim()
+                            )
+                            templates[index] = updated
+                            Toast.makeText(context, "Plantilla actualizada", Toast.LENGTH_SHORT).show()
+                        }
+                        templateToEdit = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { templateToEdit = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
