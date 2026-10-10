@@ -68,7 +68,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
-import com.example.digital_reports_app.util.DocumentScannerHelper
+import com.example.digital_reports_app.util.DocumentTextAnalyzer
 import com.example.digital_reports_app.util.NotificationHelper
 
 data class ReportTemplateItem(
@@ -125,9 +125,8 @@ fun FormTemplateScreen(
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var showCreateTemplateDialog by remember { mutableStateOf(false) }
-    var showScanDocumentDialog by remember { mutableStateOf(false) }
 
-    // Dialog state for New Template / Scan
+    // Dialog state for New Template
     var newTemplateTitle by remember { mutableStateOf("") }
     var newTemplateCategory by remember { mutableStateOf("Inspección") }
     var newTemplateDescription by remember { mutableStateOf("") }
@@ -140,16 +139,36 @@ fun FormTemplateScreen(
     var selectedAreaStatus by remember { mutableStateOf("Bueno") }
     var temperatureInput by remember { mutableStateOf("24") }
 
-    // 1. Camera TakePicturePreview Launcher
+    // 1. Camera TakePicturePreview Launcher: Captures photo & Analyzes photo to create template automatically
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            newTemplateTitle = "Formato Escaneado #${templates.size + 1}"
-            newTemplateCategory = "Inspección"
-            newTemplateDescription = "Plantilla extraída mediante captura de cámara de formato físico."
-            showScanDocumentDialog = true
-            Toast.makeText(context, "Foto de formato capturada con éxito", Toast.LENGTH_SHORT).show()
+            // Analyze the captured photo with DocumentTextAnalyzer
+            val nextIndex = templates.size + 1
+            val result = DocumentTextAnalyzer.analyzeScannedBitmap(bitmap, nextIndex)
+
+            val scannedTemplate = ReportTemplateItem(
+                id = "scanned_tpl_${System.currentTimeMillis()}",
+                title = result.templateTitle,
+                category = result.category,
+                description = result.description,
+                icon = Icons.Outlined.Edit
+            )
+
+            // Add the newly created template to the list
+            templates.add(0, scannedTemplate)
+
+            // Automatically select the scanned template and open the form editor!
+            selectedTemplate = scannedTemplate
+            viewModel.onTitleChanged(scannedTemplate.title)
+            viewModel.onCategoryChanged(scannedTemplate.category)
+
+            Toast.makeText(
+                context,
+                "¡Foto analizada! Plantilla '${scannedTemplate.title}' creada con éxito",
+                Toast.LENGTH_LONG
+            ).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
         }
@@ -166,20 +185,7 @@ fun FormTemplateScreen(
                 Toast.makeText(context, "Error al abrir la cámara: ${e.message}", Toast.LENGTH_LONG).show()
             }
         } else {
-            Toast.makeText(context, "Se requiere permiso de cámara para escanear formatos físicos.", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    // 3. Storage File/PDF/Image Picker Fallback
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            newTemplateTitle = "Formato Cargado #${templates.size + 1}"
-            newTemplateCategory = "Inspección"
-            newTemplateDescription = "Plantilla extraída de archivo escaneado PDF/Imagen."
-            showScanDocumentDialog = true
-            Toast.makeText(context, "Documento cargado correctamente", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Se requiere permiso de cámara para escanear el formato impreso.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -192,8 +198,8 @@ fun FormTemplateScreen(
         if (hasPermission) {
             try {
                 cameraLauncher.launch(null)
-            } catch (_: Exception) {
-                filePickerLauncher.launch("image/*")
+            } catch (e: Exception) {
+                Toast.makeText(context, "No se pudo iniciar la cámara: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -273,7 +279,7 @@ fun FormTemplateScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Scan Document Button
+                        // Scan Document via Native Camera Button
                         OutlinedButton(
                             onClick = {
                                 triggerCameraOrScan()
@@ -592,61 +598,6 @@ fun FormTemplateScreen(
                 }
             }
         }
-    }
-
-    // SCAN PHYSICAL DOCUMENT DIALOG
-    if (showScanDocumentDialog) {
-        AlertDialog(
-            onDismissRequest = { showScanDocumentDialog = false },
-            title = { Text("Documento Capturado", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Foto del formato recibida. Se han extraído los campos del documento impreso.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = newTemplateTitle,
-                        onValueChange = { newTemplateTitle = it },
-                        label = { Text("Nombre para la Plantilla Escaneada *") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = newTemplateCategory,
-                        onValueChange = { newTemplateCategory = it },
-                        label = { Text("Categoría (ej. Inspección, Mantenimiento)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newTemplateTitle.isNotBlank()) {
-                            val scannedTpl = DocumentScannerHelper.createTemplateFromScan(
-                                templateTitle = newTemplateTitle,
-                                category = newTemplateCategory,
-                                description = "Plantilla extraída mediante captura de cámara del formato físico."
-                            )
-                            templates.add(0, scannedTpl)
-                            showScanDocumentDialog = false
-                            Toast.makeText(context, "Plantilla escaneada '${scannedTpl.title}' lista", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Crear Plantilla", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showScanDocumentDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
     }
 
     // CREATE NEW TEMPLATE DIALOG
