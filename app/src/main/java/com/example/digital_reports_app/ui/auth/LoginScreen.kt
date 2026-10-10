@@ -284,7 +284,7 @@ fun LoginScreen(
                                 )
                             } else {
                                 Text(
-                                    text = "Ingresar a DocuField",
+                                    text = "Iniciar Sesión",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
