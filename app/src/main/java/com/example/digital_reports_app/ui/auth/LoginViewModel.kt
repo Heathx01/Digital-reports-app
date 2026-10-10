@@ -33,7 +33,7 @@ class LoginViewModel @Inject constructor(
     fun onUserCodeChanged(userCode: String) {
         val trimmed = userCode.trim()
         val error = when {
-            trimmed.isNotEmpty() && trimmed.length < 6 -> "El código de trabajador debe tener al menos 6 caracteres."
+            trimmed.isNotEmpty() && trimmed.length < 6 -> "El código de usuario debe tener al menos 6 caracteres."
             else -> null
         }
         _uiState.update { 
@@ -77,8 +77,8 @@ class LoginViewModel @Inject constructor(
         var isValid = true
 
         val userCodeErr = when {
-            userCode.isBlank() -> "Por favor ingresa tu código de trabajador."
-            userCode.length < 6 -> "El código de trabajador debe tener al menos 6 caracteres."
+            userCode.isBlank() -> "Por favor ingresa tu código de usuario."
+            userCode.length < 6 -> "El código de usuario debe tener al menos 6 caracteres."
             else -> null
         }
         if (userCodeErr != null) {

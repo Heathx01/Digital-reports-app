@@ -56,7 +56,8 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
+                    .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header and Brand Logo
@@ -124,7 +125,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Código de Trabajador",
+                            text = "Código de Usuario",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
