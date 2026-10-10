@@ -14,14 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +44,8 @@ import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.report.ReportListViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
+import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
+import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.worker.SyncReportsWorker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,8 +111,8 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Bienvenido de nuevo",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "DocuField • Telemetría de Turno",
+                        style = TelemetryMonoStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -127,7 +125,7 @@ fun HomeScreen(
                     },
                     modifier = Modifier
                         .size(44.dp)
-                        .background(MaterialTheme.colorScheme.surface, CircleShape)
+                        .liquidGlass(cornerRadius = 22.dp, prominent = true)
                 ) {
                     Text("🔔", fontSize = 20.sp)
                 }
@@ -135,32 +133,31 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Summary Card (Resumen General)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+            // Summary Card (Resumen General Liquid Glass)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .padding(20.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
+                Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Resumen general",
+                            text = "Dashboard Operativo",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Este mes",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.8f)
+                            text = "EN LÍNEA",
+                            style = TelemetryMonoStyle.copy(fontSize = 10.sp),
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -192,7 +189,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 TextButton(onClick = onBitacoraClick) {
-                    Text("Ver todos", color = MaterialTheme.colorScheme.primary)
+                    Text("Ver todos", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -200,16 +197,16 @@ fun HomeScreen(
 
             // Recent Activity Items
             if (reportUiState.reports.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(cornerRadius = 16.dp)
+                        .padding(20.dp)
                 ) {
                     Text(
                         text = "Aún no hay actividad reciente.\nCrea un nuevo reporte desde las opciones.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(20.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -223,7 +220,7 @@ fun HomeScreen(
 
             // Módulos Grid
             Text(
-                text = "Módulos",
+                text = "Módulos de Inspección",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -238,7 +235,7 @@ fun HomeScreen(
                 // Nuevo Reporte
                 ModuleCard(
                     title = "Nuevo Reporte",
-                    subtitle = "Crear un reporte desde cero",
+                    subtitle = "Crear reporte técnico",
                     iconText = "➕",
                     onClick = onCreateReportClick,
                     modifier = Modifier.weight(1f)
@@ -246,8 +243,8 @@ fun HomeScreen(
 
                 // Plantillas
                 ModuleCard(
-                    title = "Plantillas",
-                    subtitle = "Usar plantilla preseteada",
+                    title = "Plantillas ISO",
+                    subtitle = "Formatos homologados",
                     iconText = "📄",
                     onClick = onCreateReportClick,
                     modifier = Modifier.weight(1f)
@@ -263,7 +260,7 @@ private fun SummaryMetricItem(title: String, value: String) {
         Text(
             text = title,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
+            color = Color.White.copy(alpha = 0.85f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -280,19 +277,15 @@ private fun RecentActivityItemCard(
     report: ReportEntity,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .liquidGlass(cornerRadius = 16.dp)
+            .clickable { onClick() }
+            .padding(14.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -360,20 +353,17 @@ private fun ModuleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+    Box(
+        modifier = modifier
+            .liquidGlass(cornerRadius = 18.dp, prominent = true)
+            .clickable { onClick() }
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp)),
+                    .size(42.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(iconText, fontSize = 20.sp)

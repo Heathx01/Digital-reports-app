@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.NotificationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,12 +81,12 @@ fun FormTemplateScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Inspección diaria",
+                            text = "Llenado de Inspección",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Plantilla",
+                            text = "Formato Homologado ISO 9001",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -123,7 +123,7 @@ fun FormTemplateScreen(
                         val isActive = step <= currentStep
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .background(
                                     if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                     CircleShape
@@ -141,125 +141,143 @@ fun FormTemplateScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Section 1: Información General
-                Text(
-                    text = "1. Información general",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                // Section 1: Información General Liquid Glass Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(cornerRadius = 20.dp)
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "1. Información general",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = uiState.title.ifBlank { "Inspección diaria de Planta" },
-                    onValueChange = viewModel::onTitleChanged,
-                    label = { Text("Título del reporte *") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
+                        OutlinedTextField(
+                            value = uiState.title.ifBlank { "Inspección diaria de Planta" },
+                            onValueChange = viewModel::onTitleChanged,
+                            label = { Text("Título del reporte *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                // Área / Ubicación Dropdown
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = selectedLocation,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Área / Ubicación *") },
-                        trailingIcon = { Text("▼") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    DropdownMenu(
-                        expanded = locationExpanded,
-                        onDismissRequest = { locationExpanded = false }
-                    ) {
-                        listOf("Planta Principal", "Área de Embalaje", "Almacén B", "Línea de Ensamblaje").forEach { loc ->
-                            DropdownMenuItem(
-                                text = { Text(loc) },
-                                onClick = {
-                                    selectedLocation = loc
-                                    locationExpanded = false
-                                }
+                        // Área / Ubicación Dropdown
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = selectedLocation,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Área / Ubicación *") },
+                                trailingIcon = { Text("▼") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
                             )
+                            DropdownMenu(
+                                expanded = locationExpanded,
+                                onDismissRequest = { locationExpanded = false }
+                            ) {
+                                listOf("Planta Principal", "Área de Embalaje", "Almacén B", "Línea de Ensamblaje").forEach { loc ->
+                                    DropdownMenuItem(
+                                        text = { Text(loc) },
+                                        onClick = {
+                                            selectedLocation = loc
+                                            locationExpanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Section 2: Condiciones Generales
-                Text(
-                    text = "2. Condiciones generales",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                // Section 2: Condiciones Generales Liquid Glass Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(cornerRadius = 20.dp)
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "2. Condiciones generales",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                // Estado del Área
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = selectedAreaStatus,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Estado del área *") },
-                        trailingIcon = { Text("▼") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    DropdownMenu(
-                        expanded = areaStatusExpanded,
-                        onDismissRequest = { areaStatusExpanded = false }
-                    ) {
-                        listOf("Bueno", "Regular", "Requiere Atención", "Crítico").forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status) },
-                                onClick = {
-                                    selectedAreaStatus = status
-                                    areaStatusExpanded = false
-                                }
+                        // Estado del Área
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = selectedAreaStatus,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Estado del área *") },
+                                trailingIcon = { Text("▼") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
                             )
+                            DropdownMenu(
+                                expanded = areaStatusExpanded,
+                                onDismissRequest = { areaStatusExpanded = false }
+                            ) {
+                                listOf("Bueno", "Regular", "Requiere Atención", "Crítico").forEach { status ->
+                                    DropdownMenuItem(
+                                        text = { Text(status) },
+                                        onClick = {
+                                            selectedAreaStatus = status
+                                            areaStatusExpanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Temperatura
+                        OutlinedTextField(
+                            value = temperatureInput,
+                            onValueChange = { temperatureInput = it },
+                            label = { Text("Temperatura (°C)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Observaciones
+                        OutlinedTextField(
+                            value = uiState.description,
+                            onValueChange = viewModel::onDescriptionChanged,
+                            label = { Text("Observaciones") },
+                            minLines = 3,
+                            maxLines = 5,
+                            placeholder = { Text("Todo en condiciones normales.") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+
+                        Text(
+                            text = "${uiState.description.length}/500",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.End)
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Temperatura
-                OutlinedTextField(
-                    value = temperatureInput,
-                    onValueChange = { temperatureInput = it },
-                    label = { Text("Temperatura (°C)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Observaciones
-                OutlinedTextField(
-                    value = uiState.description,
-                    onValueChange = viewModel::onDescriptionChanged,
-                    label = { Text("Observaciones") },
-                    minLines = 3,
-                    maxLines = 5,
-                    placeholder = { Text("Todo en condiciones normales.") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-
-                Text(
-                    text = "${uiState.description.length}/500",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.End)
-                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))

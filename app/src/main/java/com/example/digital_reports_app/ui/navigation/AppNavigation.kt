@@ -50,7 +50,7 @@ fun AppNavigation(
     ) {
         composable(Screen.LOGIN) {
             LoginScreen(
-                onLoginSuccess = {
+                onNavigateToHome = {
                     navController.navigate(Screen.BIOMETRIC)
                 }
             )

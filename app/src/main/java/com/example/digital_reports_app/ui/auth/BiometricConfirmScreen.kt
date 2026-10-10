@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -35,12 +33,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.digital_reports_app.ui.theme.liquidGlass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BiometricConfirmScreen(
     onConfirmSuccess: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var selectedMethod by remember { mutableStateOf("Biometría") }
     val methods = listOf("Biometría", "PIN", "Patrón")
@@ -75,14 +74,14 @@ fun BiometricConfirmScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Verifica tu identidad",
+                        text = "Verifica tu Identidad",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Usa tu método de seguridad preferido",
+                        text = "Firma biométrica para ingreso a DocuField",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -103,32 +102,40 @@ fun BiometricConfirmScreen(
                     }
                 }
 
-                // Fingerprint Graphic
+                // Fingerprint Liquid Glass Sensor
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable { onConfirmSuccess() }
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(160.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                shape = CircleShape
-                            )
-                            .border(
-                                width = 3.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape
-                            ),
+                            .size(170.dp)
+                            .liquidGlass(cornerRadius = 85.dp, prominent = true)
+                            .clickable { onConfirmSuccess() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("🖐️", fontSize = 72.sp)
+                        Box(
+                            modifier = Modifier
+                                .size(140.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🖐️", fontSize = 72.sp)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(28.dp))
 
                     Text(
-                        text = "Coloca tu huella en el sensor",
+                        text = "Coloca tu huella en el sensor biométrico",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -136,7 +143,7 @@ fun BiometricConfirmScreen(
 
                 TextButton(onClick = onBack) {
                     Text(
-                        text = "Usar otro método",
+                        text = "Usar método PIN o Patrón",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

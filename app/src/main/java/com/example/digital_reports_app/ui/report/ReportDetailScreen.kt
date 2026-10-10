@@ -16,8 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -37,11 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.digital_reports_app.util.PdfReportGenerator
+import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
+import com.example.digital_reports_app.ui.theme.liquidGlass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +62,7 @@ fun ReportDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Detalles del Reporte",
+                        text = "Dictamen Técnico",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -74,8 +72,7 @@ fun ReportDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -98,7 +95,7 @@ fun ReportDetailScreen(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Reporte no encontrado.")
+                    Text("Expediente no encontrado.")
                 }
             } else {
                 Column(
@@ -110,17 +107,14 @@ fun ReportDetailScreen(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        // Header info card
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                        // Header Liquid Glass Card
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                                .padding(20.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(20.dp)
-                            ) {
+                            Column {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,7 +122,7 @@ fun ReportDetailScreen(
                                 ) {
                                     Text(
                                         text = report.reportId,
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = TelemetryMonoStyle,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -154,15 +148,15 @@ fun ReportDetailScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = "Creado por: ${report.authorName} (${report.authorCode})",
+                                    text = "Inspector: ${report.authorName} (${report.authorCode})",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 Text(
                                     text = "Fecha: ${report.dateFormatted}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -177,24 +171,22 @@ fun ReportDetailScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.background
-                            )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(cornerRadius = 16.dp)
+                                .padding(16.dp)
                         ) {
                             Text(
                                 text = report.description,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(16.dp)
+                                style = MaterialTheme.typography.bodyLarge
                             )
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Acciones del Reporte:",
+                            text = "Acciones de Expediente:",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -208,13 +200,13 @@ fun ReportDetailScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
+                                .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("📄 Exportar / Compartir PDF", fontWeight = FontWeight.Bold)
+                            Text("📄 Previsualizar / Exportar PDF ISO", fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -286,7 +278,7 @@ private fun StatusBadge(status: String) {
     val (backgroundColor, textColor) = when (status) {
         "COMPLETADO" -> Color(0xFFC8E6C9) to Color(0xFF1B5E20)
         "EN_PROCESO" -> Color(0xFFBBDEFB) to Color(0xFF0D47A1)
-        else -> Color(0xFFFFECB3) to Color(0xFFE65100) // PENDIENTE
+        else -> Color(0xFFFFECB3) to Color(0xFFE65100)
     }
 
     Box(

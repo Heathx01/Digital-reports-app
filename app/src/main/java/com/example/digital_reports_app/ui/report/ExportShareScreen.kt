@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
+import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.PdfReportGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,30 +96,29 @@ fun ExportShareScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "¡Reporte listo!",
+                text = "¡PDF Generado!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
-                text = "Tu reporte se ha generado correctamente.",
+                text = "Tu documento técnico ISO/IEC 17020 está listo.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // PDF File Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            // PDF File Liquid Glass Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(cornerRadius = 16.dp, prominent = true)
+                    .padding(16.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -142,7 +140,7 @@ fun ExportShareScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "PDF · 245 KB",
+                            text = "PDF ISO/IEC 17020 · SHA-256",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -166,7 +164,7 @@ fun ExportShareScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Ver PDF", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Previsualizar PDF", color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -254,7 +252,8 @@ private fun ShareOptionButton(
         Box(
             modifier = Modifier
                 .size(54.dp)
-                .background(MaterialTheme.colorScheme.surface, CircleShape),
+                .liquidGlass(cornerRadius = 27.dp)
+                .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
             Text(iconText, fontSize = 20.sp)
@@ -274,17 +273,15 @@ private fun ExportRowItem(
     title: String,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .liquidGlass(cornerRadius = 14.dp)
+            .clickable { onClick() }
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

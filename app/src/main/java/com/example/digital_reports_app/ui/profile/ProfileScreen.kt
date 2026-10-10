@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -46,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
+import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.worker.SyncReportsWorker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +57,7 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val userName = uiState.currentUser?.name ?: "Usuario"
-    val userCode = uiState.currentUser?.workerCode ?: "---"
+    val userCode = uiState.currentUser?.userCode ?: "---"
     val context = LocalContext.current
 
     if (uiState.isLoggedOut) {
@@ -87,83 +87,87 @@ fun ProfileScreen(
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Título
             Text(
-                text = "Ajustes",
+                text = "Ajustes y Perfil",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            val userName = uiState.currentUser?.name ?: "Usuario"
-            val userCode = uiState.currentUser?.userCode ?: ""
-
-            // User Info Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            // User Info Header Card with Liquid Glass
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .padding(20.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = userName.take(1).uppercase(),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = userName.take(1).uppercase(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                Column {
-                    Text(
-                        text = userName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "ID: $userCode",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column {
+                        Text(
+                            text = userName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "CIP / ID: $userCode",
+                            style = TelemetryMonoStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Settings List Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            // Settings List Card with Liquid Glass
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(cornerRadius = 20.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     
                     // Profile / Password (Navigate to details)
                     SettingItemClickable(
-                        title = "Perfil y Contraseña",
+                        title = "Perfil y Credenciales",
                         onClick = {
                             Toast.makeText(context, "Navegar a Editar Perfil", Toast.LENGTH_SHORT).show()
                         }
                     )
-                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Dark Mode Toggle
                     SettingItemToggle(
-                        title = "Modo Oscuro",
+                        title = "Modo Oscuro (Socavón)",
                         checked = uiState.isDarkTheme,
                         onCheckedChange = { viewModel.setDarkTheme(it) }
                     )
-                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Language
                     SettingItemValue(
@@ -174,7 +178,7 @@ fun ProfileScreen(
                             viewModel.setLanguage(newLang)
                         }
                     )
-                    HorizontalHorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Background Sync
                     SettingItemToggle(
@@ -191,7 +195,7 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
             // Logout Button
             Button(
@@ -273,7 +277,3 @@ fun SettingItemToggle(title: String, checked: Boolean, onCheckedChange: (Boolean
         )
     }
 }
-
-
-
-

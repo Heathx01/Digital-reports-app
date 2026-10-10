@@ -1,10 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ================================================================= -->
+<!-- DocuField Industrial - Tokens de Color para Android (XML Nativo) -->
+<!-- Ubicación recomendada: res/values/colors.xml y res/values-night/  -->
+<!-- ================================================================= -->
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- ==================== MODO CLARO (DIURNO / TERRENO) ==================== -->
+    <color name="docufield_light_primary">#EA580C</color> <!-- Naranja Industrial -->
+    <color name="docufield_light_on_primary">#FFFFFF</color>
+    <color name="docufield_light_primary_container">#FFEDD5</color>
+    <color name="docufield_light_on_primary_container">#9A3412</color>
+    <color name="docufield_light_secondary">#0F172A</color>
+    <color name="docufield_light_on_secondary">#FFFFFF</color>
+    <color name="docufield_light_background">#F4F6FB</color>
+    <color name="docufield_light_on_background">#0F172A</color>
+    <color name="docufield_light_surface">#FFFFFF</color>
+    <color name="docufield_light_on_surface">#0F172A</color>
+    <color name="docufield_light_on_surface_variant">#475569</color>
+    <color name="docufield_light_outline">#CBD5E1</color>
+    <color name="docufield_light_outline_variant">#E2E8F0</color>
+    <color name="docufield_light_success">#16A34A</color>
+    <color name="docufield_light_warning">#D97706</color>
+    <color name="docufield_light_error">#DC2626</color>
+
+    <!-- Superficies Liquid Glass (Modo Claro ARGB) -->
+    <color name="docufield_glass_light_surface">#D1FFFFFF</color> <!-- 82% Blanco -->
+    <color name="docufield_glass_light_surface_prominent">#EBFFFFFF</color> <!-- 92% Blanco -->
+    <color name="docufield_glass_light_border_specular">#E6FFFFFF</color> <!-- 90% Bisel Blanco -->
+    <color name="docufield_glass_light_border_subtle">#66CBD5E1</color> <!-- 40% Bisel Grisáceo -->
+
+    <!-- ==================== MODO OSCURO (NOCTURNO / SOCAVÓN) ==================== -->
+    <color name="docufield_dark_primary">#3B82F6</color> <!-- Azul Eléctrico -->
+    <color name="docufield_dark_on_primary">#050B14</color>
+    <color name="docufield_dark_primary_container">#1E3A8A</color>
+    <color name="docufield_dark_on_primary_container">#DBEAFE</color>
+    <color name="docufield_dark_secondary">#06B6D4</color> <!-- Cian Telemetría -->
+    <color name="docufield_dark_on_secondary">#021721</color>
+    <color name="docufield_dark_background">#090D16</color> <!-- Carbón Titanio -->
+    <color name="docufield_dark_on_background">#F8FAFC</color>
+    <color name="docufield_dark_surface">#0F131C</color>
+    <color name="docufield_dark_on_surface">#F1F5F9</color>
+    <color name="docufield_dark_on_surface_variant">#94A3B8</color>
+    <color name="docufield_dark_outline">#1E293B</color>
+    <color name="docufield_dark_outline_variant">#334155</color>
+    <color name="docufield_dark_success">#22C55E</color>
+    <color name="docufield_dark_warning">#F59E0B</color>
+    <color name="docufield_dark_error">#EF4444</color>
+
+    <!-- Superficies Liquid Glass (Modo Oscuro ARGB) -->
+    <color name="docufield_glass_dark_surface">#C20F172A</color> <!-- 76% Carbón Pizarra -->
+    <color name="docufield_glass_dark_surface_prominent">#D61E293B</color> <!-- 84% Titanio -->
+    <color name="docufield_glass_dark_border_specular">#663B82F6</color> <!-- 40% Bisel Azul Cobalto -->
+    <color name="docufield_glass_dark_border_subtle">#401E293B</color> <!-- 25% Bisel Inferior -->
 </resources>

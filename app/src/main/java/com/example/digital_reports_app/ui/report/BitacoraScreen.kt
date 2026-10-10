@@ -17,10 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +41,7 @@ import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
+import com.example.digital_reports_app.ui.theme.liquidGlass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +58,7 @@ fun BitacoraScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Bitácora de reportes",
+                        text = "Bitácora de Expedientes",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -81,7 +79,7 @@ fun BitacoraScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Search Input with Filter Icon
+            // Search Input
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,7 +89,7 @@ fun BitacoraScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = viewModel::onSearchQueryChanged,
-                    placeholder = { Text("Buscar reportes...") },
+                    placeholder = { Text("Buscar por código o título...") },
                     leadingIcon = { Text("🔍") },
                     trailingIcon = { Text("🎚️") },
                     singleLine = true,
@@ -130,7 +128,7 @@ fun BitacoraScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No hay reportes registrados en la bitácora.",
+                        text = "No hay expedientes registrados en la bitácora.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -160,17 +158,15 @@ private fun BitacoraCardItem(
     report: ReportEntity,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .liquidGlass(cornerRadius = 16.dp)
+            .clickable { onClick() }
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -187,7 +183,7 @@ private fun BitacoraCardItem(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .background(bgColor, RoundedCornerShape(10.dp)),
+                        .background(bgColor, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(iconText, fontSize = 20.sp)
