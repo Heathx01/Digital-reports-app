@@ -292,22 +292,6 @@ fun LoginScreen(
                             }
                         }
 
-                        // Native Biometric Quick Auth Option
-                        if (activity != null && BiometricAuthManager(activity).canAuthenticate()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    triggerLoginWithBiometrics()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(24.dp)
-                            ) {
-                                Text("🖐️ Acceso Nativo (Huella / Rostro / PIN)", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-
                         if (uiState.errorMessage != null) {
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
