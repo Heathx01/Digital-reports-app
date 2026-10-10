@@ -123,35 +123,12 @@ fun LoginScreen(
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Telemetry Badge
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Código de Trabajador",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "TURNO A",
-                                    style = TelemetryMonoStyle.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                        Text(
+                            text = "Código de Trabajador",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -160,6 +137,16 @@ fun LoginScreen(
                             onValueChange = viewModel::onUserCodeChanged,
                             placeholder = { Text("ej. 215800") },
                             singleLine = true,
+                            isError = uiState.userCodeError != null,
+                            supportingText = {
+                                if (uiState.userCodeError != null) {
+                                    Text(
+                                        text = uiState.userCodeError ?: "",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
                                 imeAction = ImeAction.Next
@@ -172,7 +159,7 @@ fun LoginScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
                             text = "Contraseña",
@@ -188,6 +175,16 @@ fun LoginScreen(
                             onValueChange = viewModel::onPasswordChanged,
                             placeholder = { Text("••••••••") },
                             singleLine = true,
+                            isError = uiState.passwordError != null,
+                            supportingText = {
+                                if (uiState.passwordError != null) {
+                                    Text(
+                                        text = uiState.passwordError ?: "",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
                             visualTransformation = if (uiState.isPasswordVisible) {
                                 VisualTransformation.None
                             } else {
@@ -220,15 +217,21 @@ fun LoginScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(28.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         // Primary Login Button
+                        val isSubmitEnabled = uiState.userCode.isNotBlank() &&
+                                uiState.password.isNotBlank() &&
+                                uiState.userCodeError == null &&
+                                uiState.passwordError == null &&
+                                !uiState.isLoading
+
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
                                 viewModel.login()
                             },
-                            enabled = !uiState.isLoading,
+                            enabled = isSubmitEnabled,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
@@ -263,18 +266,6 @@ fun LoginScreen(
                             )
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                TextButton(
-                    onClick = { /* Recovery action */ }
-                ) {
-                    Text(
-                        text = "¿Olvidaste tu código? Contacta a tu supervisor",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
         }

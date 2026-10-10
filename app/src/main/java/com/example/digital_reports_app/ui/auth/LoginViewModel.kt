@@ -16,6 +16,8 @@ data class LoginUiState(
     val password: String = "",
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
+    val userCodeError: String? = null,
+    val passwordError: String? = null,
     val errorMessage: String? = null,
     val isLoggedIn: Boolean = false
 )
@@ -29,11 +31,32 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onUserCodeChanged(userCode: String) {
-        _uiState.update { it.copy(userCode = userCode, errorMessage = null) }
+        val trimmed = userCode.trim()
+        val error = when {
+            trimmed.isNotEmpty() && trimmed.length < 3 -> "El código debe tener al menos 3 caracteres."
+            else -> null
+        }
+        _uiState.update { 
+            it.copy(
+                userCode = userCode,
+                userCodeError = error,
+                errorMessage = null
+            )
+        }
     }
 
     fun onPasswordChanged(password: String) {
-        _uiState.update { it.copy(password = password, errorMessage = null) }
+        val error = when {
+            password.isNotEmpty() && password.length < 4 -> "La contraseña debe tener al menos 4 caracteres."
+            else -> null
+        }
+        _uiState.update { 
+            it.copy(
+                password = password,
+                passwordError = error,
+                errorMessage = null
+            )
+        }
     }
 
     fun togglePasswordVisibility() {
@@ -41,22 +64,32 @@ class LoginViewModel @Inject constructor(
     }
 
     fun clearErrorMessage() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessage = null, userCodeError = null, passwordError = null) }
     }
 
     fun login() {
-        val userCode = _uiState.value.userCode
+        val userCode = _uiState.value.userCode.trim()
         val password = _uiState.value.password
 
+        var isValid = true
+
         if (userCode.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu código de trabajador.") }
-            return
+            _uiState.update { it.copy(userCodeError = "Por favor ingresa tu código de trabajador.") }
+            isValid = false
+        } else if (userCode.length < 3) {
+            _uiState.update { it.copy(userCodeError = "El código debe tener al menos 3 caracteres.") }
+            isValid = false
         }
 
         if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu contraseña.") }
-            return
+            _uiState.update { it.copy(passwordError = "Por favor ingresa tu contraseña.") }
+            isValid = false
+        } else if (password.length < 4) {
+            _uiState.update { it.copy(passwordError = "La contraseña debe tener al menos 4 caracteres.") }
+            isValid = false
         }
+
+        if (!isValid) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
