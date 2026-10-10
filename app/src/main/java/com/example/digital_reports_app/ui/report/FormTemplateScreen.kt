@@ -273,14 +273,14 @@ fun FormTemplateScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Scan Document via Native Camera Button
+                        // Scan Document Button
                         OutlinedButton(
                             onClick = {
                                 triggerCameraOrScan()
                             },
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("📷 Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         // Create New Template Button
