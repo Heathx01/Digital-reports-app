@@ -55,11 +55,7 @@ fun LoginScreen(
         if (activity != null) {
             val biometricAuthManager = BiometricAuthManager(activity)
             if (biometricAuthManager.canAuthenticate()) {
-                biometricAuthManager.showBiometricPrompt(
-                    title = "Firma Biométrica DocuField",
-                    subtitle = "Confirmación de seguridad nativa",
-                    description = "Confirma tu identidad con tu huella, rostro o PIN para continuar"
-                ) { result ->
+                biometricAuthManager.showBiometricPrompt { result ->
                     when (result) {
                         is BiometricAuthResult.Success -> {
                             viewModel.login()

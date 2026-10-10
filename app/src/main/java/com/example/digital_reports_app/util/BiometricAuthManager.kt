@@ -23,9 +23,9 @@ class BiometricAuthManager(private val activity: FragmentActivity) {
     }
 
     fun showBiometricPrompt(
-        title: String = "Autenticación Nativa DocuField",
-        subtitle: String = "Verificación de seguridad de inspector",
-        description: String = "Confirma tu identidad con tu huella, rostro o PIN del dispositivo",
+        title: String = "Iniciar sesión",
+        subtitle: String? = null,
+        description: String? = null,
         onResult: (BiometricAuthResult) -> Unit
     ) {
         if (!canAuthenticate()) {
@@ -44,7 +44,7 @@ class BiometricAuthManager(private val activity: FragmentActivity) {
                 super.onAuthenticationError(errorCode, errString)
                 if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
                     errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                    onResult(BiometricAuthResult.Error("Autenticación cancelada por el usuario."))
+                    onResult(BiometricAuthResult.Error("Autenticación cancelada."))
                 } else {
                     onResult(BiometricAuthResult.Error(errString.toString()))
                 }
@@ -52,14 +52,21 @@ class BiometricAuthManager(private val activity: FragmentActivity) {
 
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
-                onResult(BiometricAuthResult.Error("No se reconoció la huella o rostro. Intenta de nuevo."))
+                onResult(BiometricAuthResult.Error("No se reconoció la biometría. Intenta nuevamente."))
             }
         }
 
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        val builder = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
-            .setSubtitle(subtitle)
-            .setDescription(description)
+
+        if (!subtitle.isNullOrBlank()) {
+            builder.setSubtitle(subtitle)
+        }
+        if (!description.isNullOrBlank()) {
+            builder.setDescription(description)
+        }
+
+        val promptInfo = builder
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or
                         BiometricManager.Authenticators.BIOMETRIC_WEAK or
