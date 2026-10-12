@@ -34,10 +34,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -102,58 +100,8 @@ fun FormTemplateScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Dynamic Templates Catalog
-    val templates = remember {
-        mutableStateListOf(
-            ReportTemplateItem(
-                id = "tpl_1",
-                title = "Inspección Diaria de Planta",
-                category = "Inspección",
-                description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
-                icon = Icons.Outlined.Edit,
-                fields = mutableStateListOf(*DocumentTextAnalyzer.createDefaultFields().toTypedArray())
-            ),
-            ReportTemplateItem(
-                id = "tpl_2",
-                title = "Mantenimiento Preventivo de Maquinaria",
-                category = "Mantenimiento",
-                description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
-                icon = Icons.Outlined.Info,
-                fields = mutableStateListOf(
-                    CustomFormField("m_1", "Código de Maquinaria", FormFieldType.TEXT, "MQ-104"),
-                    CustomFormField("m_2", "Nivel de Aceite", FormFieldType.DROPDOWN, "Normal", listOf("Normal", "Bajo", "Crítico")),
-                    CustomFormField("m_3", "Presión (PSI)", FormFieldType.NUMBER, "120"),
-                    CustomFormField("m_4", "Observaciones de Mantenimiento", FormFieldType.TEXT, "Piezas en buen estado.")
-                )
-            ),
-            ReportTemplateItem(
-                id = "tpl_3",
-                title = "Control de Seguridad e Higiene",
-                category = "Incidencia",
-                description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
-                icon = Icons.Outlined.Check,
-                fields = mutableStateListOf(
-                    CustomFormField("s_1", "Zona de Trabajo", FormFieldType.TEXT, "Socavón / Nivel 2"),
-                    CustomFormField("s_2", "Uso de EPP", FormFieldType.DROPDOWN, "Conforme", listOf("Conforme", "Incompleto", "No Conforme")),
-                    CustomFormField("s_3", "Medición de Gas (PPM)", FormFieldType.NUMBER, "12"),
-                    CustomFormField("s_4", "Detalles de Seguridad", FormFieldType.TEXT, "Sin incidencias graves.")
-                )
-            ),
-            ReportTemplateItem(
-                id = "tpl_4",
-                title = "Auditoría de Almacén y Embalaje",
-                category = "General",
-                description = "Revisión de inventarios, cajas y estado de carga de materiales.",
-                icon = Icons.Outlined.DateRange,
-                fields = mutableStateListOf(
-                    CustomFormField("a_1", "Sector de Almacén", FormFieldType.TEXT, "Almacén B"),
-                    CustomFormField("a_2", "Estado de Empaque", FormFieldType.DROPDOWN, "Excelente", listOf("Excelente", "Dañado", "Incompleto")),
-                    CustomFormField("a_3", "Cantidad de Cajas", FormFieldType.NUMBER, "450"),
-                    CustomFormField("a_4", "Notas de Carga", FormFieldType.TEXT, "Carga lista para despacho.")
-                )
-            )
-        )
-    }
+    // Observe templates directly from Room DB
+    val templates = uiState.savedTemplates
 
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
@@ -197,29 +145,7 @@ fun FormTemplateScreen(
         selectedTemplateIds.clear()
     }
 
-    val moveSelectedUp = {
-        val indices = templates.indices.filter { selectedTemplateIds.contains(templates[it].id) }
-        for (i in indices) {
-            if (i > 0 && !selectedTemplateIds.contains(templates[i - 1].id)) {
-                val temp = templates[i]
-                templates[i] = templates[i - 1]
-                templates[i - 1] = temp
-            }
-        }
-    }
-
-    val moveSelectedDown = {
-        val indices = templates.indices.filter { selectedTemplateIds.contains(templates[it].id) }.reversed()
-        for (i in indices) {
-            if (i < templates.size - 1 && !selectedTemplateIds.contains(templates[i + 1].id)) {
-                val temp = templates[i]
-                templates[i] = templates[i + 1]
-                templates[i + 1] = temp
-            }
-        }
-    }
-
-    // 1. PDF File Upload Launcher: Opens document picker to upload PDF format
+    // PDF File Upload Launcher: Analyzes PDF and loads fields into Dialog
     val pdfPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -247,13 +173,13 @@ fun FormTemplateScreen(
             newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
 
             showScanDocumentDialog = true
-            Toast.makeText(context, "Archivo PDF cargado. Configura el nombre y campos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Archivo PDF cargado. Asigna nombre y confirma los campos.", Toast.LENGTH_LONG).show()
         } else {
             Toast.makeText(context, "Carga de PDF cancelada", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // 2. Camera TakePicturePreview Launcher: Captures photo & Analyzes photo to create template
+    // Camera TakePicturePreview Launcher: Analyzes photo OCR and loads fields into Dialog
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
@@ -268,13 +194,13 @@ fun FormTemplateScreen(
             newTemplateFields.addAll(result.extractedFields)
 
             showScanDocumentDialog = true
-            Toast.makeText(context, "Foto analizada. Revisa los campos de la plantilla.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Foto analizada. Asigna el nombre y confirma los campos.", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // 3. Camera Runtime Permission Launcher
+    // Camera Runtime Permission Launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -330,7 +256,7 @@ fun FormTemplateScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Mover, editar o eliminar plantillas",
+                                text = "Editar o eliminar plantillas seleccionadas",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -380,24 +306,6 @@ fun FormTemplateScreen(
                 },
                 actions = {
                     if (isSelectionMode && selectedTemplate == null) {
-                        // Move Up
-                        IconButton(onClick = { moveSelectedUp() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.KeyboardArrowUp,
-                                contentDescription = "Mover Arriba",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        // Move Down
-                        IconButton(onClick = { moveSelectedDown() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "Mover Abajo",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
                         // Edit if exactly 1 item selected
                         if (selectedTemplateIds.size == 1) {
                             IconButton(
@@ -454,7 +362,7 @@ fun FormTemplateScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        // Scan Document via Native Camera Button
+                        // Scan Document Button
                         OutlinedButton(
                             onClick = { triggerCameraOrScan() },
                             shape = RoundedCornerShape(10.dp)
@@ -771,7 +679,7 @@ fun FormTemplateScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Documento/PDF procesado. Revisa y asigna el nombre, tipo y campos de la plantilla:",
+                        text = "Documento procesado. Revisa y asigna el nombre, tipo y campos de la plantilla:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -836,17 +744,14 @@ fun FormTemplateScreen(
                 Button(
                     onClick = {
                         if (newTemplateTitle.isNotBlank()) {
-                            val scannedTpl = ReportTemplateItem(
-                                id = "scanned_pdf_${System.currentTimeMillis()}",
-                                title = newTemplateTitle.trim(),
-                                category = newTemplateCategory.trim().ifBlank { "Inspección" },
-                                description = newTemplateDescription.trim().ifBlank { "Plantilla generada a partir de archivo PDF / documento físico." },
-                                icon = Icons.Outlined.Edit,
-                                fields = mutableStateListOf(*newTemplateFields.map { it.copy() }.toTypedArray())
+                            viewModel.saveTemplateToDb(
+                                title = newTemplateTitle,
+                                category = newTemplateCategory,
+                                description = newTemplateDescription,
+                                fields = newTemplateFields
                             )
-                            templates.add(0, scannedTpl)
                             showScanDocumentDialog = false
-                            Toast.makeText(context, "Plantilla '${scannedTpl.title}' configurada con éxito", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada en la base de datos", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -933,17 +838,14 @@ fun FormTemplateScreen(
                 Button(
                     onClick = {
                         if (newTemplateTitle.isNotBlank()) {
-                            val newTpl = ReportTemplateItem(
-                                id = "tpl_${System.currentTimeMillis()}",
-                                title = newTemplateTitle.trim(),
-                                category = newTemplateCategory.trim().ifBlank { "General" },
-                                description = newTemplateDescription.trim().ifBlank { "Plantilla personalizada de la empresa." },
-                                icon = Icons.Outlined.Edit,
-                                fields = mutableStateListOf(*newTemplateFields.map { it.copy() }.toTypedArray())
+                            viewModel.saveTemplateToDb(
+                                title = newTemplateTitle,
+                                category = newTemplateCategory,
+                                description = newTemplateDescription,
+                                fields = newTemplateFields
                             )
-                            templates.add(0, newTpl)
                             showCreateTemplateDialog = false
-                            Toast.makeText(context, "Plantilla '${newTpl.title}' creada con éxito", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada en la base de datos", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -1034,16 +936,15 @@ fun FormTemplateScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val index = templates.indexOfFirst { it.id == tpl.id }
-                        if (index != -1 && editTitle.isNotBlank()) {
-                            val updated = tpl.copy(
-                                title = editTitle.trim(),
-                                category = editCategory.trim(),
-                                description = editDescription.trim(),
-                                fields = mutableStateListOf(*editFields.map { it.copy() }.toTypedArray())
+                        if (editTitle.isNotBlank()) {
+                            viewModel.saveTemplateToDb(
+                                title = editTitle,
+                                category = editCategory,
+                                description = editDescription,
+                                fields = editFields,
+                                customId = tpl.id
                             )
-                            templates[index] = updated
-                            Toast.makeText(context, "Plantilla actualizada con éxito", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla actualizada en la base de datos", Toast.LENGTH_SHORT).show()
                         }
                         templateToEdit = null
                         clearSelection()
@@ -1072,8 +973,8 @@ fun FormTemplateScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        templates.removeAll { selectedTemplateIds.contains(it.id) }
-                        Toast.makeText(context, "${selectedTemplateIds.size} plantilla(s) eliminada(s)", Toast.LENGTH_SHORT).show()
+                        viewModel.deleteTemplatesByIdsFromDb(selectedTemplateIds.toList())
+                        Toast.makeText(context, "${selectedTemplateIds.size} plantilla(s) eliminada(s) de la base de datos", Toast.LENGTH_SHORT).show()
                         showDeleteConfirmDialog = false
                         clearSelection()
                     },
