@@ -77,6 +77,9 @@ dependencies {
     // PDFBox
     implementation(libs.pdfbox.android)
 
+    // ML Kit Text Recognition for OCR Scanned Document Analysis
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 
