@@ -3,6 +3,7 @@ package com.example.digital_reports_app.di
 import android.content.Context
 import androidx.room.Room
 import com.example.digital_reports_app.data.local.dao.ReportDao
+import com.example.digital_reports_app.data.local.dao.TemplateDao
 import com.example.digital_reports_app.data.local.dao.UserDao
 import com.example.digital_reports_app.data.local.database.AppDatabase
 import com.example.digital_reports_app.data.local.entity.UserEntity
@@ -60,5 +61,10 @@ object DatabaseModule {
     @Provides
     fun provideReportDao(database: AppDatabase): ReportDao {
         return database.reportDao()
+    }
+
+    @Provides
+    fun provideTemplateDao(database: AppDatabase): TemplateDao {
+        return database.templateDao()
     }
 }
