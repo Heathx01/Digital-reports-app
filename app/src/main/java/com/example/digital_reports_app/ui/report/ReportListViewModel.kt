@@ -100,6 +100,18 @@ class ReportListViewModel @Inject constructor(
         }
     }
 
+    fun restoreReport(report: ReportEntity) {
+        viewModelScope.launch {
+            reportRepository.createReport(
+                title = report.title,
+                category = report.category,
+                description = report.description,
+                authorCode = report.authorCode,
+                authorName = report.authorName
+            )
+        }
+    }
+
     private fun applyFiltersAndSort(
         list: List<ReportEntity>,
         statusFilter: String,

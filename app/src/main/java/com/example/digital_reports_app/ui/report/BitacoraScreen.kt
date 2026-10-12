@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
@@ -38,6 +39,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,11 +51,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,11 +66,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
+import com.example.digital_reports_app.ui.theme.SkeletonReportCardItem
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.PdfReportGenerator
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +83,9 @@ fun BitacoraScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val filterOptions = listOf("TODOS", "COMPLETADOS", "PENDIENTES")
     var sortMenuExpanded by remember { mutableStateOf(false) }
@@ -83,6 +96,7 @@ fun BitacoraScreen(
     val pendingCount = uiState.reports.count { it.status != "COMPLETADO" }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -127,7 +141,7 @@ fun BitacoraScreen(
                 }
             }
 
-            // Search Bar & Sort Dropdown
+            // Search Bar & Clear Button & Sort Dropdown
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -145,6 +159,18 @@ fun BitacoraScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Limpiar Búsqueda",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
@@ -211,7 +237,10 @@ fun BitacoraScreen(
                     }
                     FilterChip(
                         selected = uiState.selectedStatusFilter == filterKey,
-                        onClick = { viewModel.onStatusFilterSelected(filterKey) },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.onStatusFilterSelected(filterKey)
+                        },
                         label = { Text(filter) }
                     )
                 }
@@ -229,8 +258,17 @@ fun BitacoraScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Reports List
-            if (uiState.filteredReports.isEmpty()) {
+            // Reports List or Skeleton Loading
+            if (uiState.isLoading) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    repeat(4) {
+                        SkeletonReportCardItem()
+                    }
+                }
+            } else if (uiState.filteredReports.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -273,18 +311,31 @@ fun BitacoraScreen(
         }
     }
 
-    // Delete Report Confirmation Dialog
+    // Delete Report Confirmation Dialog with UNDO Snackbar
     reportToDelete?.let { report ->
         AlertDialog(
             onDismissRequest = { reportToDelete = null },
             title = { Text("Eliminar Expediente", fontWeight = FontWeight.Bold) },
-            text = { Text("¿Estás seguro de que deseas eliminar el reporte '${report.title}'? Esta acción no se puede deshacer.") },
+            text = { Text("¿Estás seguro de que deseas eliminar el reporte '${report.title}'?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteReport(report.reportId)
-                        Toast.makeText(context, "Reporte eliminado", Toast.LENGTH_SHORT).show()
+                        val deletedTarget = report
+                        viewModel.deleteReport(deletedTarget.reportId)
                         reportToDelete = null
+
+                        // Show Snackbar with UNDO Action
+                        scope.launch {
+                            val snackbarResult = snackbarHostState.showSnackbar(
+                                message = "Expediente '${deletedTarget.title}' eliminado",
+                                actionLabel = "DESHACER",
+                                duration = SnackbarDuration.Short
+                            )
+                            if (snackbarResult == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreReport(deletedTarget)
+                                Toast.makeText(context, "Expediente restaurado", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {

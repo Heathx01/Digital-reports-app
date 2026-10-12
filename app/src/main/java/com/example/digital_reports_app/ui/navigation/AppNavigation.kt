@@ -1,5 +1,7 @@
 package com.example.digital_reports_app.ui.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -41,10 +43,30 @@ fun AppNavigation(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        enterTransition = { slideInHorizontally(initialOffsetX = { 700 }) + fadeIn() },
-        exitTransition = { slideOutHorizontally(targetOffsetX = { -700 }) + fadeOut() },
-        popEnterTransition = { slideInHorizontally(initialOffsetX = { -700 }) + fadeIn() },
-        popExitTransition = { slideOutHorizontally(targetOffsetX = { 700 }) + fadeOut() }
+        enterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth / 4 },
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth / 4 },
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(300))
+        }
     ) {
         composable(Screen.LOGIN) {
             LoginScreen(
