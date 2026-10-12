@@ -24,6 +24,8 @@ class SessionManager @Inject constructor(
         private val KEY_IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
         private val KEY_THEME_MODE = stringPreferencesKey("app_theme_mode") // "DARK", "LIGHT", "SYSTEM"
         private val KEY_LANGUAGE = stringPreferencesKey("app_language")
+        private val KEY_IS_AUTO_SYNC_ENABLED = booleanPreferencesKey("is_auto_sync_enabled")
+        private val KEY_HAS_SEEDED_TEMPLATES = booleanPreferencesKey("has_seeded_templates")
     }
 
     val currentUserId: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -48,6 +50,26 @@ class SessionManager @Inject constructor(
 
     val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[KEY_LANGUAGE] ?: "Español"
+    }
+
+    val isAutoSyncEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_IS_AUTO_SYNC_ENABLED] ?: true
+    }
+
+    val hasSeededTemplates: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_HAS_SEEDED_TEMPLATES] ?: false
+    }
+
+    suspend fun setAutoSyncEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_IS_AUTO_SYNC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setHasSeededTemplates(seeded: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_HAS_SEEDED_TEMPLATES] = seeded
+        }
     }
 
     suspend fun setThemeMode(mode: String) {

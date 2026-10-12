@@ -28,7 +28,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
@@ -114,10 +113,12 @@ fun ProfileScreen(
         }
     }
 
-    LaunchedEffect(uiState.currentUser) {
-        if (uiState.currentUser != null) {
+    LaunchedEffect(uiState.currentUser, uiState.showEditProfileDialog) {
+        if (uiState.currentUser != null && uiState.showEditProfileDialog) {
             editNameInput = uiState.currentUser?.name ?: ""
             editCodeInput = uiState.currentUser?.userCode ?: ""
+            currentPasswordInput = ""
+            newPasswordInput = ""
         }
     }
 
@@ -247,7 +248,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Settings List Card with Liquid Glass
+            // Non-redundant Settings List Card with Liquid Glass
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -273,16 +274,19 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Automatic / Manual Sync
+                    // Automatic / Manual Sync (Persisted via DataStore)
                     SettingItemToggle(
                         icon = Icons.Outlined.Check,
                         title = "Sincronización Automática",
-                        checked = true,
+                        checked = uiState.isAutoSyncEnabled,
                         onCheckedChange = { isChecked ->
+                            viewModel.setAutoSyncEnabled(isChecked)
                             if (isChecked) {
                                 val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
                                 WorkManager.getInstance(context).enqueue(syncRequest)
-                                Toast.makeText(context, "Sincronización en segundo plano iniciada", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Sincronización automática activada", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Sincronización automática desactivada", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )

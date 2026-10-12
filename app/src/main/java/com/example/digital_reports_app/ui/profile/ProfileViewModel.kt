@@ -18,8 +18,11 @@ import javax.inject.Inject
 data class ProfileUiState(
     val currentUser: UserEntity? = null,
     val isDarkTheme: Boolean = false,
+    val isAutoSyncEnabled: Boolean = true,
     val themeMode: String = "SYSTEM", // "DARK", "LIGHT", "SYSTEM"
     val selectedLanguage: String = "Español",
+    val currentPasswordInput: String = "",
+    val newPasswordInput: String = "",
     val isLoading: Boolean = false,
     val showThemeModeDialog: Boolean = false,
     val showEditProfileDialog: Boolean = false,
@@ -47,12 +50,15 @@ class ProfileViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            val userId = authRepository.getCurrentUserId().first()
-            if (userId != null) {
-                val user = authRepository.getUserById(userId)
-                _uiState.update { it.copy(currentUser = user) }
+            authRepository.getCurrentUserId().collect { userId ->
+                if (userId != null) {
+                    val user = authRepository.getUserById(userId)
+                    _uiState.update { it.copy(currentUser = user) }
+                }
             }
+        }
 
+        viewModelScope.launch {
             sessionManager.themeMode.collect { mode ->
                 _uiState.update { it.copy(themeMode = mode, isDarkTheme = (mode == "DARK")) }
             }
@@ -61,6 +67,12 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.appLanguage.collect { lang ->
                 _uiState.update { it.copy(selectedLanguage = lang) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.isAutoSyncEnabled.collect { isEnabled ->
+                _uiState.update { it.copy(isAutoSyncEnabled = isEnabled) }
             }
         }
     }
@@ -79,6 +91,13 @@ class ProfileViewModel @Inject constructor(
     fun setLanguage(language: String) {
         viewModelScope.launch {
             sessionManager.setAppLanguage(language)
+        }
+    }
+
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAutoSyncEnabled(enabled)
+            _uiState.update { it.copy(isAutoSyncEnabled = enabled) }
         }
     }
 
@@ -117,7 +136,6 @@ class ProfileViewModel @Inject constructor(
 
         var updatedPassword = user.passwordHash
 
-        // If user is attempting to change password
         if (newPasswordInput.isNotBlank() || currentPasswordInput.isNotBlank()) {
             if (currentPasswordInput.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Ingresa tu contraseña actual para autorizar el cambio.") }
@@ -147,11 +165,15 @@ class ProfileViewModel @Inject constructor(
             userDao.insertUsers(listOf(updatedUser))
             sessionManager.saveSession(updatedUser.userId, updatedUser.name, updatedUser.userCode)
 
+            val freshUser = userDao.getUserById(updatedUser.userId)
+
             _uiState.update {
                 it.copy(
-                    currentUser = updatedUser,
+                    currentUser = freshUser ?: updatedUser,
                     isLoading = false,
                     showEditProfileDialog = false,
+                    currentPasswordInput = "",
+                    newPasswordInput = "",
                     successMessage = "Perfil y credenciales actualizados con éxito"
                 )
             }

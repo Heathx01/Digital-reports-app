@@ -2,6 +2,7 @@ package com.example.digital_reports_app.ui.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.digital_reports_app.data.local.SessionManager
 import com.example.digital_reports_app.data.local.entity.TemplateEntity
 import com.example.digital_reports_app.data.local.entity.UserEntity
 import com.example.digital_reports_app.data.repository.AuthRepository
@@ -33,7 +34,8 @@ data class CreateReportUiState(
 class CreateReportViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
     private val templateRepository: TemplateRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateReportUiState())
@@ -45,10 +47,12 @@ class CreateReportViewModel @Inject constructor(
 
     private fun loadTemplatesFromDb() {
         viewModelScope.launch {
+            val hasSeeded = sessionManager.hasSeededTemplates.first()
+
             templateRepository.getAllTemplates().collect { dbTemplates ->
-                if (dbTemplates.isEmpty()) {
-                    // Seed default company templates if Room DB is empty
+                if (dbTemplates.isEmpty() && !hasSeeded) {
                     seedInitialTemplates()
+                    sessionManager.setHasSeededTemplates(true)
                 } else {
                     val converted = dbTemplates.map { entity ->
                         ReportTemplateItem(

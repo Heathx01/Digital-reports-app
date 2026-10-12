@@ -60,9 +60,11 @@ fun LoginScreen(
                         is BiometricAuthResult.Success -> {
                             viewModel.login()
                         }
+
                         is BiometricAuthResult.Error -> {
                             Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
                         }
+
                         else -> {
                             viewModel.login()
                         }
