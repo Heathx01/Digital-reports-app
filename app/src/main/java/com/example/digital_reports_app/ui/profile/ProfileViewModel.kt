@@ -22,6 +22,10 @@ data class ProfileUiState(
     val currentPasswordInput: String = "",
     val newPasswordInput: String = "",
     val isLoading: Boolean = false,
+    val showEditProfileDialog: Boolean = false,
+    val showLanguageDialog: Boolean = false,
+    val showUpdateVersionDialog: Boolean = false,
+    val showLogoutConfirmDialog: Boolean = false,
     val successMessage: String? = null,
     val errorMessage: String? = null,
     val isLoggedOut: Boolean = false
@@ -73,46 +77,39 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun onCurrentPasswordChanged(input: String) {
-        _uiState.update { it.copy(currentPasswordInput = input, errorMessage = null, successMessage = null) }
+    fun toggleEditProfileDialog(show: Boolean) {
+        _uiState.update { it.copy(showEditProfileDialog = show) }
     }
 
-    fun onNewPasswordChanged(input: String) {
-        _uiState.update { it.copy(newPasswordInput = input, errorMessage = null, successMessage = null) }
+    fun toggleLanguageDialog(show: Boolean) {
+        _uiState.update { it.copy(showLanguageDialog = show) }
     }
 
-    fun changePassword() {
+    fun toggleUpdateVersionDialog(show: Boolean) {
+        _uiState.update { it.copy(showUpdateVersionDialog = show) }
+    }
+
+    fun toggleLogoutConfirmDialog(show: Boolean) {
+        _uiState.update { it.copy(showLogoutConfirmDialog = show) }
+    }
+
+    fun updateUserProfile(newName: String, newCode: String) {
         val user = _uiState.value.currentUser ?: return
-        val currentInput = _uiState.value.currentPasswordInput
-        val newInput = _uiState.value.newPasswordInput
-
-        if (currentInput.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa tu contraseña actual.") }
-            return
-        }
-
-        if (currentInput != user.passwordHash) {
-            _uiState.update { it.copy(errorMessage = "La contraseña actual no es correcta.") }
-            return
-        }
-
-        if (newInput.length < 6) {
-            _uiState.update { it.copy(errorMessage = "La nueva contraseña debe tener al menos 6 caracteres.") }
-            return
-        }
+        if (newName.isBlank() || newCode.isBlank()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val updatedUser = user.copy(passwordHash = newInput)
+            val updatedUser = user.copy(
+                name = newName.trim(),
+                userCode = newCode.trim()
+            )
             userDao.insertUsers(listOf(updatedUser))
+            sessionManager.saveSession(updatedUser.userId, updatedUser.name, updatedUser.userCode)
 
             _uiState.update {
                 it.copy(
                     currentUser = updatedUser,
-                    currentPasswordInput = "",
-                    newPasswordInput = "",
-                    isLoading = false,
-                    successMessage = "¡Contraseña actualizada con éxito!"
+                    showEditProfileDialog = false,
+                    successMessage = "Perfil actualizado con éxito"
                 )
             }
         }
@@ -121,7 +118,7 @@ class ProfileViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
-            _uiState.update { it.copy(isLoggedOut = true) }
+            _uiState.update { it.copy(isLoggedOut = true, showLogoutConfirmDialog = false) }
         }
     }
 }

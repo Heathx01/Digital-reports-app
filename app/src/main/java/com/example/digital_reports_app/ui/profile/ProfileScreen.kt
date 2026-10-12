@@ -19,12 +19,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -35,9 +47,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,12 +74,22 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val userName = uiState.currentUser?.name ?: "Usuario"
-    val userCode = uiState.currentUser?.userCode ?: "---"
+    val userCode = uiState.currentUser?.userCode ?: "215800"
     val context = LocalContext.current
+
+    var editNameInput by remember { mutableStateOf(userName) }
+    var editCodeInput by remember { mutableStateOf(userCode) }
 
     if (uiState.isLoggedOut) {
         LaunchedEffect(Unit) {
             onLogout()
+        }
+    }
+
+    LaunchedEffect(uiState.currentUser) {
+        if (uiState.currentUser != null) {
+            editNameInput = uiState.currentUser?.name ?: ""
+            editCodeInput = uiState.currentUser?.userCode ?: ""
         }
     }
 
@@ -73,7 +99,11 @@ fun ProfileScreen(
                 title = { Text("") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text("←", fontSize = 24.sp)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -89,7 +119,7 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Título
             Text(
@@ -99,7 +129,7 @@ fun ProfileScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // User Info Header Card with Liquid Glass
             Box(
@@ -110,41 +140,62 @@ fun ProfileScreen(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = userName.take(1).uppercase(),
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = userName.take(1).uppercase(),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = userName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "Código de Usuario: $userCode",
+                                style = TelemetryMonoStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Rol: ${uiState.currentUser?.role ?: "INSPECTOR"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = userName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "CIP / ID: $userCode",
-                            style = TelemetryMonoStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Edit Profile Button
+                    IconButton(onClick = { viewModel.toggleEditProfileDialog(true) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Editar Perfil",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Settings List Card with Liquid Glass
             Box(
@@ -153,55 +204,71 @@ fun ProfileScreen(
                     .liquidGlass(cornerRadius = 20.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    
-                    // Profile / Password (Navigate to details)
+
+                    // Profile & Credentials
                     SettingItemClickable(
+                        icon = Icons.Outlined.Person,
                         title = "Perfil y Credenciales",
-                        onClick = {
-                            Toast.makeText(context, "Navegar a Editar Perfil", Toast.LENGTH_SHORT).show()
-                        }
+                        value = "Editar",
+                        onClick = { viewModel.toggleEditProfileDialog(true) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Dark Mode Toggle
+                    // Dark Theme Mode Toggle (Independent of system theme)
                     SettingItemToggle(
+                        icon = Icons.Outlined.Info,
                         title = "Modo Oscuro (Socavón)",
                         checked = uiState.isDarkTheme,
-                        onCheckedChange = { viewModel.setDarkTheme(it) }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Language
-                    SettingItemValue(
-                        title = "Idioma",
-                        value = uiState.selectedLanguage,
-                        onClick = {
-                            val newLang = if (uiState.selectedLanguage == "Español") "English" else "Español"
-                            viewModel.setLanguage(newLang)
+                        onCheckedChange = { isChecked ->
+                            viewModel.setDarkTheme(isChecked)
+                            Toast.makeText(
+                                context,
+                                if (isChecked) "Modo Oscuro activado" else "Modo Claro activado",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Background Sync
+                    // Language Selector
+                    SettingItemValue(
+                        icon = Icons.Outlined.Settings,
+                        title = "Idioma de la App",
+                        value = uiState.selectedLanguage,
+                        onClick = { viewModel.toggleLanguageDialog(true) }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Automatic / Manual Sync
                     SettingItemToggle(
+                        icon = Icons.Outlined.Check,
                         title = "Sincronización Automática",
                         checked = true,
-                        onCheckedChange = {
-                            if (it) {
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
                                 val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
                                 WorkManager.getInstance(context).enqueue(syncRequest)
-                                Toast.makeText(context, "Sincronización iniciada", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Sincronización en segundo plano iniciada", Toast.LENGTH_SHORT).show()
                             }
                         }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Check Updates Button
+                    SettingItemClickable(
+                        icon = Icons.Outlined.Refresh,
+                        title = "Buscar Actualizaciones",
+                        value = "v1.0.0",
+                        onClick = { viewModel.toggleUpdateVersionDialog(true) }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Logout Button
             Button(
-                onClick = { viewModel.logout() },
+                onClick = { viewModel.toggleLogoutConfirmDialog(true) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -221,25 +288,154 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
 
-@Composable
-fun SettingItemClickable(title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-        Text(text = "›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // EDIT PROFILE DIALOG
+    if (uiState.showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleEditProfileDialog(false) },
+            title = { Text("Editar Perfil de Inspector", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editNameInput,
+                        onValueChange = { editNameInput = it },
+                        label = { Text("Nombre Completo *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editCodeInput,
+                        onValueChange = { editCodeInput = it },
+                        label = { Text("Código de Usuario (min. 6 dígitos) *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editNameInput.isNotBlank() && editCodeInput.isNotBlank()) {
+                            viewModel.updateUserProfile(editNameInput, editCodeInput)
+                            Toast.makeText(context, "Perfil actualizado con éxito", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.toggleEditProfileDialog(false) }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // LANGUAGE SELECTOR DIALOG
+    if (uiState.showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleLanguageDialog(false) },
+            title = { Text("Seleccionar Idioma", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setLanguage("Español")
+                                viewModel.toggleLanguageDialog(false)
+                                Toast.makeText(context, "Idioma cambiado a Español", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Español (Latinoamérica)", style = MaterialTheme.typography.bodyLarge)
+                        if (uiState.selectedLanguage == "Español") {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setLanguage("English")
+                                viewModel.toggleLanguageDialog(false)
+                                Toast.makeText(context, "Language set to English", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("English (United States)", style = MaterialTheme.typography.bodyLarge)
+                        if (uiState.selectedLanguage == "English") {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                OutlinedButton(onClick = { viewModel.toggleLanguageDialog(false) }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
+
+    // CHECK VERSION / UPDATE DIALOG
+    if (uiState.showUpdateVersionDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleUpdateVersionDialog(false) },
+            title = { Text("Actualización de Software", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("DocuField Enterprise v1.0.0", style = TelemetryMonoStyle, color = MaterialTheme.colorScheme.primary)
+                    Text("Tu aplicación está actualizada a la última versión oficial disponible en el servidor.", style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.toggleUpdateVersionDialog(false) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Entendido", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // LOGOUT CONFIRMATION DIALOG
+    if (uiState.showLogoutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleLogoutConfirmDialog(false) },
+            title = { Text("Cerrar Sesión", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas cerrar sesión? Tendrás que ingresar tus credenciales para volver a entrar.") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.logout() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cerrar Sesión", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.toggleLogoutConfirmDialog(false) }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun SettingItemValue(title: String, value: String, onClick: () -> Unit) {
+fun SettingItemClickable(
+    icon: ImageVector,
+    title: String,
+    value: String = "",
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -248,7 +444,51 @@ fun SettingItemValue(title: String, value: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (value.isNotEmpty()) {
+                Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(text = "›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun SettingItemValue(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.width(8.dp))
@@ -258,7 +498,12 @@ fun SettingItemValue(title: String, value: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SettingItemToggle(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun SettingItemToggle(
+    icon: ImageVector,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -266,7 +511,16 @@ fun SettingItemToggle(title: String, checked: Boolean, onCheckedChange: (Boolean
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
