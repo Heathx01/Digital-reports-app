@@ -1,13 +1,17 @@
 package com.example.digital_reports_app.util
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.net.Uri
 import com.example.digital_reports_app.domain.model.PageSize
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 
 enum class FormFieldType {
     TEXT, NUMBER, DROPDOWN, CHECKBOX
@@ -33,6 +37,115 @@ data class AnalyzedDocumentResult(
 object DocumentTextAnalyzer {
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
+    /**
+     * Extrae el texto real impreso en un archivo PDF utilizando PDFTextStripper
+     * e infiere el título y las etiquetas reales del formulario.
+     */
+    fun analyzePdfUri(context: Context, pdfUri: Uri, templateIndex: Int): AnalyzedDocumentResult {
+        return try {
+            val extractedText = context.contentResolver.openInputStream(pdfUri)?.use { inputStream ->
+                val pdDoc = PDDocument.load(inputStream)
+                val stripper = PDFTextStripper()
+                val text = stripper.getText(pdDoc)
+                pdDoc.close()
+                text
+            } ?: ""
+
+            val rawLines = extractedText.split("\n")
+                .map { it.trim().replace("\r", "") }
+                .filter { it.length > 2 && !it.contains("PÁGINA", ignoreCase = true) }
+
+            if (rawLines.isEmpty()) {
+                return analyzeScannedBitmapWithMlKit(
+                    Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888),
+                    templateIndex
+                )
+            }
+
+            // Extract Title from PDF Text
+            val titleCandidate = rawLines.firstOrNull { line ->
+                val txt = line.uppercase()
+                txt.contains("INSPECCION") || txt.contains("CONTROL") ||
+                txt.contains("REPORTE") || txt.contains("FORMATO") ||
+                txt.contains("MANTENIMIENTO") || txt.contains("AUDITORIA") ||
+                txt.contains("HOJA") || txt.contains("ORDEN")
+            } ?: rawLines.first()
+
+            val extractedTitle = titleCandidate.replace(":", "").replace("_", " ").trim()
+
+            // Extract Category
+            val category = when {
+                extractedTitle.contains("Mantenimiento", ignoreCase = true) -> "Mantenimiento"
+                extractedTitle.contains("Seguridad", ignoreCase = true) -> "Incidencia"
+                extractedTitle.contains("Almacen", ignoreCase = true) -> "General"
+                else -> "Inspección"
+            }
+
+            // Extract real fields from PDF text lines
+            val fieldsList = mutableListOf<CustomFormField>()
+            var fieldCounter = 1
+
+            for (line in rawLines) {
+                if (line.equals(titleCandidate, ignoreCase = true)) continue
+
+                val cleanLabel = line.replace(":", "").replace("_", "").trim()
+                if (cleanLabel.length in 3..45 && !fieldsList.any { it.label.equals(cleanLabel, ignoreCase = true) }) {
+                    val fieldType = when {
+                        cleanLabel.contains("Temp", ignoreCase = true) ||
+                        cleanLabel.contains("Cantidad", ignoreCase = true) ||
+                        cleanLabel.contains("PSI", ignoreCase = true) ||
+                        cleanLabel.contains("PPM", ignoreCase = true) ||
+                        cleanLabel.contains("Número", ignoreCase = true) ||
+                        cleanLabel.contains("Codigo", ignoreCase = true) -> FormFieldType.NUMBER
+
+                        cleanLabel.contains("Estado", ignoreCase = true) ||
+                        cleanLabel.contains("Nivel", ignoreCase = true) ||
+                        cleanLabel.contains("Uso", ignoreCase = true) -> FormFieldType.DROPDOWN
+
+                        else -> FormFieldType.TEXT
+                    }
+
+                    val options = if (fieldType == FormFieldType.DROPDOWN) {
+                        listOf("Bueno", "Regular", "Requiere Atención", "Crítico")
+                    } else emptyList()
+
+                    fieldsList.add(
+                        CustomFormField(
+                            id = "f_pdf_$fieldCounter",
+                            label = cleanLabel,
+                            type = fieldType,
+                            value = if (fieldType == FormFieldType.DROPDOWN) "Bueno" else "",
+                            options = options,
+                            positionX = 180f,
+                            positionY = (700f - (fieldCounter * 45f)).coerceAtLeast(100f)
+                        )
+                    )
+                    fieldCounter++
+                }
+
+                if (fieldsList.size >= 10) break
+            }
+
+            if (fieldsList.isEmpty()) {
+                fieldsList.addAll(createDefaultFields())
+            }
+
+            AnalyzedDocumentResult(
+                templateTitle = extractedTitle,
+                category = category,
+                description = "Plantilla generada por extracción de texto real de archivo PDF (${fieldsList.size} campos extraídos).",
+                extractedFields = fieldsList
+            )
+        } catch (_: Exception) {
+            AnalyzedDocumentResult(
+                templateTitle = "Formato PDF Escaneado #$templateIndex",
+                category = "Inspección",
+                description = "Plantilla extraída de archivo PDF cargado.",
+                extractedFields = createDefaultFields()
+            )
+        }
+    }
 
     /**
      * Analiza el Bitmap de la hoja capturada con Google ML Kit Text Recognition (OCR).

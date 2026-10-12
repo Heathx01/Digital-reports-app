@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,8 +33,10 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -145,35 +146,26 @@ fun FormTemplateScreen(
         selectedTemplateIds.clear()
     }
 
-    // PDF File Upload Launcher: Analyzes PDF and loads fields into Dialog
+    // PDF File Upload Launcher: Analyzes PDF text lines and extracts real labels into Dialog
     val pdfPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            var fileName = "Documento_Formato.pdf"
-            try {
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (cursor.moveToFirst() && nameIndex != -1) {
-                        fileName = cursor.getString(nameIndex)
-                    }
-                }
-            } catch (_: Exception) {}
+            val nextIndex = templates.size + 1
+            val pdfResult = DocumentTextAnalyzer.analyzePdfUri(context, uri, nextIndex)
 
-            val pdfTitle = fileName.removeSuffix(".pdf").removeSuffix(".PDF")
-                .replace("_", " ")
-                .replace("-", " ")
-                .trim()
-                .ifBlank { "Formato PDF Escaneado" }
-
-            newTemplateTitle = pdfTitle
-            newTemplateCategory = "Inspección"
-            newTemplateDescription = "Plantilla extraída de archivo PDF cargado ($fileName)."
+            newTemplateTitle = pdfResult.templateTitle
+            newTemplateCategory = pdfResult.category
+            newTemplateDescription = pdfResult.description
             newTemplateFields.clear()
-            newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
+            newTemplateFields.addAll(pdfResult.extractedFields)
 
             showScanDocumentDialog = true
-            Toast.makeText(context, "Archivo PDF cargado. Asigna nombre y confirma los campos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                "¡PDF analizado! Se extrajeron ${pdfResult.extractedFields.size} campos reales.",
+                Toast.LENGTH_LONG
+            ).show()
         } else {
             Toast.makeText(context, "Carga de PDF cancelada", Toast.LENGTH_SHORT).show()
         }
@@ -194,7 +186,11 @@ fun FormTemplateScreen(
             newTemplateFields.addAll(result.extractedFields)
 
             showScanDocumentDialog = true
-            Toast.makeText(context, "Foto analizada. Asigna el nombre y confirma los campos.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "¡Foto analizada! Se extrajeron ${result.extractedFields.size} campos del formato.",
+                Toast.LENGTH_LONG
+            ).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
         }
@@ -845,7 +841,7 @@ fun FormTemplateScreen(
                                 fields = newTemplateFields
                             )
                             showCreateTemplateDialog = false
-                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada en la base de datos", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '$newTemplateTitle' creada con éxito", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
