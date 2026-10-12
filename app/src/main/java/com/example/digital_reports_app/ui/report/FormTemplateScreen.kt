@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -69,13 +70,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
+import com.example.digital_reports_app.util.CustomFormField
 import com.example.digital_reports_app.util.DocumentTextAnalyzer
+import com.example.digital_reports_app.util.FormFieldType
 import com.example.digital_reports_app.util.NotificationHelper
 
 data class ReportTemplateItem(
@@ -83,7 +87,8 @@ data class ReportTemplateItem(
     var title: String,
     var category: String,
     var description: String,
-    val icon: ImageVector = Icons.Outlined.Edit
+    val icon: ImageVector = Icons.Outlined.Edit,
+    val fields: MutableList<CustomFormField> = mutableStateListOf()
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -95,7 +100,7 @@ fun FormTemplateScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Dynamic Templates List
+    // Dynamic Templates Catalog
     val templates = remember {
         mutableStateListOf(
             ReportTemplateItem(
@@ -103,28 +108,47 @@ fun FormTemplateScreen(
                 title = "Inspección Diaria de Planta",
                 category = "Inspección",
                 description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
-                icon = Icons.Outlined.Edit
+                icon = Icons.Outlined.Edit,
+                fields = mutableStateListOf(*DocumentTextAnalyzer.createDefaultFields().toTypedArray())
             ),
             ReportTemplateItem(
                 id = "tpl_2",
                 title = "Mantenimiento Preventivo de Maquinaria",
                 category = "Mantenimiento",
                 description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
-                icon = Icons.Outlined.Info
+                icon = Icons.Outlined.Info,
+                fields = mutableStateListOf(
+                    CustomFormField("m_1", "Código de Maquinaria", FormFieldType.TEXT, "MQ-104"),
+                    CustomFormField("m_2", "Nivel de Aceite", FormFieldType.DROPDOWN, "Normal", listOf("Normal", "Bajo", "Crítico")),
+                    CustomFormField("m_3", "Presión (PSI)", FormFieldType.NUMBER, "120"),
+                    CustomFormField("m_4", "Observaciones de Mantenimiento", FormFieldType.TEXT, "Piezas en buen estado.")
+                )
             ),
             ReportTemplateItem(
                 id = "tpl_3",
                 title = "Control de Seguridad e Higiene",
                 category = "Incidencia",
                 description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
-                icon = Icons.Outlined.Check
+                icon = Icons.Outlined.Check,
+                fields = mutableStateListOf(
+                    CustomFormField("s_1", "Zona de Trabajo", FormFieldType.TEXT, "Socavón / Nivel 2"),
+                    CustomFormField("s_2", "Uso de EPP", FormFieldType.DROPDOWN, "Conforme", listOf("Conforme", "Incompleto", "No Conforme")),
+                    CustomFormField("s_3", "Medición de Gas (PPM)", FormFieldType.NUMBER, "12"),
+                    CustomFormField("s_4", "Detalles de Seguridad", FormFieldType.TEXT, "Sin incidencias graves.")
+                )
             ),
             ReportTemplateItem(
                 id = "tpl_4",
                 title = "Auditoría de Almacén y Embalaje",
                 category = "General",
                 description = "Revisión de inventarios, cajas y estado de carga de materiales.",
-                icon = Icons.Outlined.DateRange
+                icon = Icons.Outlined.DateRange,
+                fields = mutableStateListOf(
+                    CustomFormField("a_1", "Sector de Almacén", FormFieldType.TEXT, "Almacén B"),
+                    CustomFormField("a_2", "Estado de Empaque", FormFieldType.DROPDOWN, "Excelente", listOf("Excelente", "Dañado", "Incompleto")),
+                    CustomFormField("a_3", "Cantidad de Cajas", FormFieldType.NUMBER, "450"),
+                    CustomFormField("a_4", "Notas de Carga", FormFieldType.TEXT, "Carga lista para despacho.")
+                )
             )
         )
     }
@@ -143,14 +167,10 @@ fun FormTemplateScreen(
     var newTemplateTitle by remember { mutableStateOf("") }
     var newTemplateCategory by remember { mutableStateOf("Inspección") }
     var newTemplateDescription by remember { mutableStateOf("") }
+    val newTemplateFields = remember { mutableStateListOf<CustomFormField>() }
 
-    // Form fields for Step 2
-    var locationExpanded by remember { mutableStateOf(false) }
-    var areaStatusExpanded by remember { mutableStateOf(false) }
-
-    var selectedLocation by remember { mutableStateOf("Planta Principal") }
-    var selectedAreaStatus by remember { mutableStateOf("Bueno") }
-    var temperatureInput by remember { mutableStateOf("24") }
+    // Dynamic Form Active Values (Step 2)
+    val activeFormFields = remember { mutableStateListOf<CustomFormField>() }
 
     // Selection Helper functions
     val toggleSelection = { templateId: String ->
@@ -197,7 +217,7 @@ fun FormTemplateScreen(
         }
     }
 
-    // 1. Camera TakePicturePreview Launcher: Redirects to Scan Dialog to set Name and Type
+    // Camera Launcher for Photo Scan -> Opens Scan Dialog with extracted dynamic fields
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
@@ -208,20 +228,17 @@ fun FormTemplateScreen(
             newTemplateTitle = result.templateTitle
             newTemplateCategory = result.category
             newTemplateDescription = result.description
+            newTemplateFields.clear()
+            newTemplateFields.addAll(result.extractedFields)
 
-            // Redirects to Template Module Config Dialog to allow setting Name and Type
             showScanDocumentDialog = true
-            Toast.makeText(
-                context,
-                "Documento capturado. Asigna nombre y tipo a la plantilla.",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, "Foto analizada. Revisa los campos de la plantilla.", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // 2. Camera Runtime Permission Launcher
+    // Camera Permission Launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -299,7 +316,7 @@ fun FormTemplateScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Paso 2: Rellena los datos para generar el reporte",
+                                text = "Paso 2: Rellena los datos dinámicos del reporte",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -386,7 +403,7 @@ fun FormTemplateScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            // STEP 1: SELECT, SCAN, CREATE OR MULTI-SELECT TEMPLATE
+            // STEP 1: CATALOG OF TEMPLATES
             if (selectedTemplate == null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -415,6 +432,8 @@ fun FormTemplateScreen(
                                 newTemplateTitle = ""
                                 newTemplateCategory = "Inspección"
                                 newTemplateDescription = ""
+                                newTemplateFields.clear()
+                                newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
                                 showCreateTemplateDialog = true
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -440,10 +459,7 @@ fun FormTemplateScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(
-                                cornerRadius = 18.dp,
-                                prominent = true
-                            )
+                            .liquidGlass(cornerRadius = 18.dp, prominent = true)
                             .then(
                                 if (isSelected) {
                                     Modifier.border(
@@ -459,6 +475,8 @@ fun FormTemplateScreen(
                                         toggleSelection(template.id)
                                     } else {
                                         selectedTemplate = template
+                                        activeFormFields.clear()
+                                        activeFormFields.addAll(template.fields.map { it.copy() })
                                         viewModel.onTitleChanged(template.title)
                                         viewModel.onCategoryChanged(template.category)
                                     }
@@ -516,7 +534,7 @@ fun FormTemplateScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Categoría / Tipo: ${template.category}",
+                                            text = "Tipo: ${template.category} • ${template.fields.size} campos",
                                             style = TelemetryMonoStyle,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -555,7 +573,7 @@ fun FormTemplateScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
             } else {
-                // STEP 2: FILL FORM BASED ON SELECTED TEMPLATE
+                // STEP 2: FILL DYNAMIC FORM FIELDS BASED ON SELECTED TEMPLATE
                 val currentTpl = selectedTemplate!!
 
                 // Selected Template Header Badge
@@ -601,7 +619,7 @@ fun FormTemplateScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Form Fields
+                // Dynamic Form Container
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -610,7 +628,7 @@ fun FormTemplateScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Llenado de Datos del Reporte",
+                            text = "Campos del Formulario",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -629,87 +647,16 @@ fun FormTemplateScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Área / Ubicación Dropdown
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = selectedLocation,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Área / Ubicación *") },
-                                trailingIcon = { Text("▼") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            DropdownMenu(
-                                expanded = locationExpanded,
-                                onDismissRequest = { locationExpanded = false }
-                            ) {
-                                listOf("Planta Principal", "Área de Embalaje", "Almacén B", "Línea de Ensamblaje").forEach { loc ->
-                                    DropdownMenuItem(
-                                        text = { Text(loc) },
-                                        onClick = {
-                                            selectedLocation = loc
-                                            locationExpanded = false
-                                        }
-                                    )
+                        // Render each dynamic field from the selected template
+                        activeFormFields.forEachIndexed { index, field ->
+                            DynamicFormFieldControl(
+                                field = field,
+                                onValueChanged = { newValue ->
+                                    activeFormFields[index] = field.copy(value = newValue)
                                 }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Estado del Área
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = selectedAreaStatus,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Estado del área *") },
-                                trailingIcon = { Text("▼") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
                             )
-                            DropdownMenu(
-                                expanded = areaStatusExpanded,
-                                onDismissRequest = { areaStatusExpanded = false }
-                            ) {
-                                listOf("Bueno", "Regular", "Requiere Atención", "Crítico").forEach { status ->
-                                    DropdownMenuItem(
-                                        text = { Text(status) },
-                                        onClick = {
-                                            selectedAreaStatus = status
-                                            areaStatusExpanded = false
-                                        }
-                                    )
-                                }
-                            }
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Temperatura
-                        OutlinedTextField(
-                            value = temperatureInput,
-                            onValueChange = { temperatureInput = it },
-                            label = { Text("Temperatura (°C)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Observaciones
-                        OutlinedTextField(
-                            value = uiState.description,
-                            onValueChange = viewModel::onDescriptionChanged,
-                            label = { Text("Observaciones del reporte") },
-                            minLines = 3,
-                            maxLines = 5,
-                            placeholder = { Text("Ingresa detalles sobre la inspección...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
-                        )
                     }
                 }
 
@@ -735,9 +682,11 @@ fun FormTemplateScreen(
                             if (uiState.title.isBlank()) {
                                 viewModel.onTitleChanged(currentTpl.title)
                             }
-                            if (uiState.description.isBlank()) {
-                                viewModel.onDescriptionChanged("Estado de área: $selectedAreaStatus. Temp: $temperatureInput °C. Reporte registrado mediante plantilla.")
+                            // Formats all filled dynamic fields into description
+                            val formattedDescription = activeFormFields.joinToString("\n") {
+                                "${it.label}: ${it.value.ifBlank { "N/A" }}"
                             }
+                            viewModel.onDescriptionChanged(formattedDescription)
                             viewModel.createReport()
                         },
                         enabled = !uiState.isLoading,
@@ -758,15 +707,18 @@ fun FormTemplateScreen(
         }
     }
 
-    // SCAN PHYSICAL DOCUMENT CONFIG DIALOG (Requirement 1: Assign Name & Type)
+    // SCAN PHYSICAL DOCUMENT CONFIG DIALOG
     if (showScanDocumentDialog) {
         AlertDialog(
             onDismissRequest = { showScanDocumentDialog = false },
             title = { Text("Configurar Plantilla Escaneada", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Text(
-                        text = "Foto del formato capturada. Ingresa el nombre y tipo/categoría para la nueva plantilla:",
+                        text = "Foto del formato capturada. Revisa y asigna el nombre, tipo y campos detectados:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -780,7 +732,7 @@ fun FormTemplateScreen(
                     OutlinedTextField(
                         value = newTemplateCategory,
                         onValueChange = { newTemplateCategory = it },
-                        label = { Text("Tipo / Categoría (ej. Inspección, Mantenimiento)") },
+                        label = { Text("Tipo / Categoría") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -791,6 +743,40 @@ fun FormTemplateScreen(
                         minLines = 2,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Text(
+                        text = "Campos Detectados (${newTemplateFields.size}):",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    newTemplateFields.forEachIndexed { idx, fld ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = fld.label,
+                                onValueChange = { newLabel ->
+                                    newTemplateFields[idx] = fld.copy(label = newLabel)
+                                },
+                                label = { Text("Campo ${idx + 1}") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { newTemplateFields.removeAt(idx) }) {
+                                Icon(imageVector = Icons.Outlined.Close, contentDescription = "Eliminar Campo", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            newTemplateFields.add(CustomFormField("field_${System.currentTimeMillis()}", "Nuevo Campo"))
+                        }
+                    ) {
+                        Text("+ Agregar Campo Adicional")
+                    }
                 }
             },
             confirmButton = {
@@ -801,12 +787,13 @@ fun FormTemplateScreen(
                                 id = "scanned_tpl_${System.currentTimeMillis()}",
                                 title = newTemplateTitle.trim(),
                                 category = newTemplateCategory.trim().ifBlank { "Inspección" },
-                                description = newTemplateDescription.trim().ifBlank { "Plantilla extraída mediante captura de cámara del formato físico." },
-                                icon = Icons.Outlined.Edit
+                                description = newTemplateDescription.trim().ifBlank { "Plantilla extraída mediante captura de cámara." },
+                                icon = Icons.Outlined.Edit,
+                                fields = mutableStateListOf(*newTemplateFields.map { it.copy() }.toTypedArray())
                             )
                             templates.add(0, scannedTpl)
                             showScanDocumentDialog = false
-                            Toast.makeText(context, "Plantilla '${scannedTpl.title}' añadida al módulo", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '${scannedTpl.title}' configurada con éxito", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -828,7 +815,10 @@ fun FormTemplateScreen(
             onDismissRequest = { showCreateTemplateDialog = false },
             title = { Text("Crear Nueva Plantilla", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     OutlinedTextField(
                         value = newTemplateTitle,
                         onValueChange = { newTemplateTitle = it },
@@ -839,7 +829,7 @@ fun FormTemplateScreen(
                     OutlinedTextField(
                         value = newTemplateCategory,
                         onValueChange = { newTemplateCategory = it },
-                        label = { Text("Tipo / Categoría (ej. Inspección, Mantenimiento)") },
+                        label = { Text("Tipo / Categoría") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -850,6 +840,40 @@ fun FormTemplateScreen(
                         minLines = 2,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Text(
+                        text = "Campos Personalizados:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    newTemplateFields.forEachIndexed { idx, fld ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = fld.label,
+                                onValueChange = { newLabel ->
+                                    newTemplateFields[idx] = fld.copy(label = newLabel)
+                                },
+                                label = { Text("Campo ${idx + 1}") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { newTemplateFields.removeAt(idx) }) {
+                                Icon(imageVector = Icons.Outlined.Close, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            newTemplateFields.add(CustomFormField("field_${System.currentTimeMillis()}", "Nuevo Campo"))
+                        }
+                    ) {
+                        Text("+ Agregar Campo")
+                    }
                 }
             },
             confirmButton = {
@@ -861,7 +885,8 @@ fun FormTemplateScreen(
                                 title = newTemplateTitle.trim(),
                                 category = newTemplateCategory.trim().ifBlank { "General" },
                                 description = newTemplateDescription.trim().ifBlank { "Plantilla personalizada de la empresa." },
-                                icon = Icons.Outlined.Edit
+                                icon = Icons.Outlined.Edit,
+                                fields = mutableStateListOf(*newTemplateFields.map { it.copy() }.toTypedArray())
                             )
                             templates.add(0, newTpl)
                             showCreateTemplateDialog = false
@@ -886,12 +911,16 @@ fun FormTemplateScreen(
         var editTitle by remember { mutableStateOf(tpl.title) }
         var editCategory by remember { mutableStateOf(tpl.category) }
         var editDescription by remember { mutableStateOf(tpl.description) }
+        val editFields = remember { mutableStateListOf(*tpl.fields.map { it.copy() }.toTypedArray()) }
 
         AlertDialog(
             onDismissRequest = { templateToEdit = null },
             title = { Text("Editar Plantilla", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     OutlinedTextField(
                         value = editTitle,
                         onValueChange = { editTitle = it },
@@ -913,6 +942,40 @@ fun FormTemplateScreen(
                         minLines = 2,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Text(
+                        text = "Editar Campos de esta Plantilla:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    editFields.forEachIndexed { idx, fld ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = fld.label,
+                                onValueChange = { newLabel ->
+                                    editFields[idx] = fld.copy(label = newLabel)
+                                },
+                                label = { Text("Campo ${idx + 1}") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { editFields.removeAt(idx) }) {
+                                Icon(imageVector = Icons.Outlined.Close, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            editFields.add(CustomFormField("ef_${System.currentTimeMillis()}", "Nuevo Campo"))
+                        }
+                    ) {
+                        Text("+ Agregar Campo")
+                    }
                 }
             },
             confirmButton = {
@@ -923,10 +986,11 @@ fun FormTemplateScreen(
                             val updated = tpl.copy(
                                 title = editTitle.trim(),
                                 category = editCategory.trim(),
-                                description = editDescription.trim()
+                                description = editDescription.trim(),
+                                fields = mutableStateListOf(*editFields.map { it.copy() }.toTypedArray())
                             )
                             templates[index] = updated
-                            Toast.makeText(context, "Plantilla actualizada", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla actualizada con éxito", Toast.LENGTH_SHORT).show()
                         }
                         templateToEdit = null
                         clearSelection()
@@ -971,5 +1035,86 @@ fun FormTemplateScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun DynamicFormFieldControl(
+    field: CustomFormField,
+    onValueChanged: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    when (field.type) {
+        FormFieldType.DROPDOWN -> {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = field.value,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("${field.label} *") },
+                    trailingIcon = { Text("▼") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    field.options.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                onValueChanged(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        FormFieldType.NUMBER -> {
+            OutlinedTextField(
+                value = field.value,
+                onValueChange = onValueChanged,
+                label = { Text("${field.label} *") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            )
+        }
+        FormFieldType.CHECKBOX -> {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(
+                    text = field.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Checkbox(
+                    checked = field.value == "Sí" || field.value == "Conforme",
+                    onCheckedChange = { isChecked ->
+                        onValueChanged(if (isChecked) "Conforme" else "No Conforme")
+                    }
+                )
+            }
+        }
+        else -> {
+            OutlinedTextField(
+                value = field.value,
+                onValueChange = onValueChanged,
+                label = { Text("${field.label} *") },
+                minLines = if (field.label.contains("Observaciones", ignoreCase = true)) 3 else 1,
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            )
+        }
     }
 }
