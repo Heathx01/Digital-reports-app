@@ -3,6 +3,8 @@ package com.example.digital_reports_app.ui.report
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -163,7 +165,7 @@ fun FormTemplateScreen(
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedTemplateIds = remember { mutableStateListOf<String>() }
 
-    // Dialog state for New Template / Scan
+    // Dialog state for New Template / Scan / PDF Upload
     var newTemplateTitle by remember { mutableStateOf("") }
     var newTemplateCategory by remember { mutableStateOf("Inspección") }
     var newTemplateDescription by remember { mutableStateOf("") }
@@ -217,7 +219,41 @@ fun FormTemplateScreen(
         }
     }
 
-    // Camera Launcher for Photo Scan -> Opens Scan Dialog with extracted dynamic fields
+    // 1. PDF File Upload Launcher: Opens document picker to upload PDF format
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            var fileName = "Documento_Formato.pdf"
+            try {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (cursor.moveToFirst() && nameIndex != -1) {
+                        fileName = cursor.getString(nameIndex)
+                    }
+                }
+            } catch (_: Exception) {}
+
+            val pdfTitle = fileName.removeSuffix(".pdf").removeSuffix(".PDF")
+                .replace("_", " ")
+                .replace("-", " ")
+                .trim()
+                .ifBlank { "Formato PDF Escaneado" }
+
+            newTemplateTitle = pdfTitle
+            newTemplateCategory = "Inspección"
+            newTemplateDescription = "Plantilla extraída de archivo PDF cargado ($fileName)."
+            newTemplateFields.clear()
+            newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
+
+            showScanDocumentDialog = true
+            Toast.makeText(context, "Archivo PDF cargado. Configura el nombre y campos.", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "Carga de PDF cancelada", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 2. Camera TakePicturePreview Launcher: Captures photo & Analyzes photo to create template
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
@@ -238,7 +274,7 @@ fun FormTemplateScreen(
         }
     }
 
-    // Camera Permission Launcher
+    // 3. Camera Runtime Permission Launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -305,7 +341,7 @@ fun FormTemplateScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Selecciona, escanea o mantén presionado para gestionar",
+                                text = "Selecciona, escanea, carga PDF o mantén presionado para gestionar",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -417,13 +453,27 @@ fun FormTemplateScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Scan Document Button
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Scan Document via Native Camera Button
                         OutlinedButton(
                             onClick = { triggerCameraOrScan() },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Upload PDF Button
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    pdfPickerLauncher.launch(arrayOf("application/pdf"))
+                                } catch (_: Exception) {
+                                    pdfPickerLauncher.launch(arrayOf("*/*"))
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Cargar PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         // Create New Template Button
@@ -436,7 +486,7 @@ fun FormTemplateScreen(
                                 newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
                                 showCreateTemplateDialog = true
                             },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(
@@ -459,7 +509,10 @@ fun FormTemplateScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(cornerRadius = 18.dp, prominent = true)
+                            .liquidGlass(
+                                cornerRadius = 18.dp,
+                                prominent = true
+                            )
                             .then(
                                 if (isSelected) {
                                     Modifier.border(
@@ -628,7 +681,7 @@ fun FormTemplateScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Campos del Formulario",
+                            text = "Llenado de Datos del Reporte",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -707,18 +760,18 @@ fun FormTemplateScreen(
         }
     }
 
-    // SCAN PHYSICAL DOCUMENT CONFIG DIALOG
+    // SCAN PHYSICAL DOCUMENT / UPLOAD PDF CONFIG DIALOG
     if (showScanDocumentDialog) {
         AlertDialog(
             onDismissRequest = { showScanDocumentDialog = false },
-            title = { Text("Configurar Plantilla Escaneada", fontWeight = FontWeight.Bold) },
+            title = { Text("Configurar Plantilla desde PDF / Foto Escaneada", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Foto del formato capturada. Revisa y asigna el nombre, tipo y campos detectados:",
+                        text = "Documento/PDF procesado. Revisa y asigna el nombre, tipo y campos de la plantilla:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -745,7 +798,7 @@ fun FormTemplateScreen(
                     )
 
                     Text(
-                        text = "Campos Detectados (${newTemplateFields.size}):",
+                        text = "Campos Extraídos (${newTemplateFields.size}):",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -784,10 +837,10 @@ fun FormTemplateScreen(
                     onClick = {
                         if (newTemplateTitle.isNotBlank()) {
                             val scannedTpl = ReportTemplateItem(
-                                id = "scanned_tpl_${System.currentTimeMillis()}",
+                                id = "scanned_pdf_${System.currentTimeMillis()}",
                                 title = newTemplateTitle.trim(),
                                 category = newTemplateCategory.trim().ifBlank { "Inspección" },
-                                description = newTemplateDescription.trim().ifBlank { "Plantilla extraída mediante captura de cámara." },
+                                description = newTemplateDescription.trim().ifBlank { "Plantilla generada a partir de archivo PDF / documento físico." },
                                 icon = Icons.Outlined.Edit,
                                 fields = mutableStateListOf(*newTemplateFields.map { it.copy() }.toTypedArray())
                             )
