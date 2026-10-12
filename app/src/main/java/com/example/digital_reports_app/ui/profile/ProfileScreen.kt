@@ -247,22 +247,13 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Non-redundant Settings List Card with Liquid Glass
+            // Settings List Card with Liquid Glass
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .liquidGlass(cornerRadius = 20.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-
-                    // Unified Profile & Credentials Edit
-                    SettingItemClickable(
-                        icon = Icons.Outlined.Person,
-                        title = "Perfil y Credenciales",
-                        value = "Editar",
-                        onClick = { viewModel.toggleEditProfileDialog(true) }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
                     // Theme Mode Selector Dropdown Modal (Oscuro, Claro, Sistema)
                     SettingItemValue(
