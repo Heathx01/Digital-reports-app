@@ -93,23 +93,46 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(showLogoutConfirmDialog = show) }
     }
 
-    fun updateUserProfile(newName: String, newCode: String) {
+    fun onCurrentPasswordChanged(input: String) {
+        _uiState.update { it.copy(currentPasswordInput = input, errorMessage = null) }
+    }
+
+    fun onNewPasswordChanged(input: String) {
+        _uiState.update { it.copy(newPasswordInput = input, errorMessage = null) }
+    }
+
+    fun changePassword() {
         val user = _uiState.value.currentUser ?: return
-        if (newName.isBlank() || newCode.isBlank()) return
+        val currentInput = _uiState.value.currentPasswordInput
+        val newInput = _uiState.value.newPasswordInput
+
+        if (currentInput.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Ingresa tu contraseña actual.") }
+            return
+        }
+
+        if (currentInput != user.passwordHash) {
+            _uiState.update { it.copy(errorMessage = "La contraseña actual no es correcta.") }
+            return
+        }
+
+        if (newInput.length < 8 || !newInput.any { it.isUpperCase() } || !newInput.any { it.isDigit() } || !newInput.any { !it.isLetterOrDigit() }) {
+            _uiState.update { it.copy(errorMessage = "La nueva contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.") }
+            return
+        }
 
         viewModelScope.launch {
-            val updatedUser = user.copy(
-                name = newName.trim(),
-                userCode = newCode.trim()
-            )
+            _uiState.update { it.copy(isLoading = true) }
+            val updatedUser = user.copy(passwordHash = newInput)
             userDao.insertUsers(listOf(updatedUser))
-            sessionManager.saveSession(updatedUser.userId, updatedUser.name, updatedUser.userCode)
 
             _uiState.update {
                 it.copy(
                     currentUser = updatedUser,
-                    showEditProfileDialog = false,
-                    successMessage = "Perfil actualizado con éxito"
+                    currentPasswordInput = "",
+                    newPasswordInput = "",
+                    isLoading = false,
+                    successMessage = "Contraseña actualizada con éxito"
                 )
             }
         }

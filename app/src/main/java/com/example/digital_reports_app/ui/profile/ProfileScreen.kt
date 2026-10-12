@@ -1,6 +1,9 @@
 ﻿package com.example.digital_reports_app.ui.profile
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
@@ -56,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,6 +68,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
+import com.example.digital_reports_app.util.AppLanguageHelper
 import com.example.digital_reports_app.worker.SyncReportsWorker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,19 +83,22 @@ fun ProfileScreen(
     val userCode = uiState.currentUser?.userCode ?: "215800"
     val context = LocalContext.current
 
-    var editNameInput by remember { mutableStateOf(userName) }
-    var editCodeInput by remember { mutableStateOf(userCode) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var avatarUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Launcher to select profile photo from gallery
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            avatarUri = uri
+            Toast.makeText(context, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (uiState.isLoggedOut) {
         LaunchedEffect(Unit) {
             onLogout()
-        }
-    }
-
-    LaunchedEffect(uiState.currentUser) {
-        if (uiState.currentUser != null) {
-            editNameInput = uiState.currentUser?.name ?: ""
-            editCodeInput = uiState.currentUser?.userCode ?: ""
         }
     }
 
@@ -131,7 +140,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // User Info Header Card with Liquid Glass
+            // User Info Header Card with Avatar Photo Edit
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,15 +156,17 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
+                        // Avatar Photo Circle with click to change photo
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                .size(64.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                .clickable { photoPickerLauncher.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = userName.take(1).uppercase(),
-                                fontSize = 24.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -175,20 +186,14 @@ fun ProfileScreen(
                                 style = TelemetryMonoStyle,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Text(
-                                text = "Rol: ${uiState.currentUser?.role ?: "INSPECTOR"}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
                         }
                     }
 
-                    // Edit Profile Button
-                    IconButton(onClick = { viewModel.toggleEditProfileDialog(true) }) {
+                    // Edit Photo Icon Button
+                    IconButton(onClick = { photoPickerLauncher.launch("image/*") }) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Editar Perfil",
+                            contentDescription = "Cambiar Foto de Perfil",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -205,16 +210,25 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
 
-                    // Profile & Credentials
+                    // Cambiar Foto de Perfil
                     SettingItemClickable(
                         icon = Icons.Outlined.Person,
-                        title = "Perfil y Credenciales",
+                        title = "Cambiar Foto de Perfil",
                         value = "Editar",
-                        onClick = { viewModel.toggleEditProfileDialog(true) }
+                        onClick = { photoPickerLauncher.launch("image/*") }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Dark Theme Mode Toggle (Independent of system theme)
+                    // Cambiar Contraseña
+                    SettingItemClickable(
+                        icon = Icons.Outlined.Lock,
+                        title = "Cambiar Contraseña",
+                        value = "Actualizar",
+                        onClick = { showChangePasswordDialog = true }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Dark Theme Mode Toggle
                     SettingItemToggle(
                         icon = Icons.Outlined.Info,
                         title = "Modo Oscuro (Socavón)",
@@ -289,51 +303,61 @@ fun ProfileScreen(
         }
     }
 
-    // EDIT PROFILE DIALOG
-    if (uiState.showEditProfileDialog) {
+    // CHANGE PASSWORD DIALOG
+    if (showChangePasswordDialog) {
         AlertDialog(
-            onDismissRequest = { viewModel.toggleEditProfileDialog(false) },
-            title = { Text("Editar Perfil de Inspector", fontWeight = FontWeight.Bold) },
+            onDismissRequest = { showChangePasswordDialog = false },
+            title = { Text("Cambiar Contraseña", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = editNameInput,
-                        onValueChange = { editNameInput = it },
-                        label = { Text("Nombre Completo *") },
+                        value = uiState.currentPasswordInput,
+                        onValueChange = viewModel::onCurrentPasswordChanged,
+                        label = { Text("Contraseña Actual *") },
                         singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        value = editCodeInput,
-                        onValueChange = { editCodeInput = it },
-                        label = { Text("Código de Usuario (min. 6 dígitos) *") },
+                        value = uiState.newPasswordInput,
+                        onValueChange = viewModel::onNewPasswordChanged,
+                        label = { Text("Nueva Contraseña (min. 8 caract.) *") },
                         singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (uiState.errorMessage != null) {
+                        Text(
+                            text = uiState.errorMessage ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (editNameInput.isNotBlank() && editCodeInput.isNotBlank()) {
-                            viewModel.updateUserProfile(editNameInput, editCodeInput)
-                            Toast.makeText(context, "Perfil actualizado con éxito", Toast.LENGTH_SHORT).show()
+                        viewModel.changePassword()
+                        if (uiState.errorMessage == null) {
+                            showChangePasswordDialog = false
+                            Toast.makeText(context, "Contraseña actualizada con éxito", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                    Text("Actualizar Contraseña", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { viewModel.toggleEditProfileDialog(false) }) {
+                OutlinedButton(onClick = { showChangePasswordDialog = false }) {
                     Text("Cancelar")
                 }
             }
         )
     }
 
-    // LANGUAGE SELECTOR DIALOG
+    // LANGUAGE SELECTOR DIALOG (Dynamic Language Switch)
     if (uiState.showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleLanguageDialog(false) },
@@ -345,6 +369,7 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .clickable {
                                 viewModel.setLanguage("Español")
+                                AppLanguageHelper.applyLanguageConfig(context, "Español")
                                 viewModel.toggleLanguageDialog(false)
                                 Toast.makeText(context, "Idioma cambiado a Español", Toast.LENGTH_SHORT).show()
                             }
@@ -362,8 +387,9 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .clickable {
                                 viewModel.setLanguage("English")
+                                AppLanguageHelper.applyLanguageConfig(context, "English")
                                 viewModel.toggleLanguageDialog(false)
-                                Toast.makeText(context, "Language set to English", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Language changed to English", Toast.LENGTH_SHORT).show()
                             }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,

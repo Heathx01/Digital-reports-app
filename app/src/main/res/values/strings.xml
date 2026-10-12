@@ -1,3 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name"></string>
+    <string name="app_name">DocuField Enterprise</string>
+    <string name="title_settings">Ajustes y Perfil</string>
+    <string name="title_home">Inicio</string>
+    <string name="title_templates">Plantillas</string>
+    <string name="title_bitacora">Bitácora</string>
+    <string name="title_profile">Perfil</string>
+    <string name="label_user_code">Código de Usuario</string>
+    <string name="label_password">Contraseña</string>
+    <string name="btn_login">Iniciar Sesión</string>
+    <string name="btn_logout">Cerrar Sesión</string>
+    <string name="opt_dark_theme">Modo Oscuro (Socavón)</string>
+    <string name="opt_language">Idioma de la App</string>
+    <string name="opt_auto_sync">Sincronización Automática</string>
+    <string name="opt_check_updates">Buscar Actualizaciones</string>
+    <string name="opt_edit_profile">Perfil y Credenciales</string>
+    <string name="title_change_password">Cambiar Contraseña</string>
+    <string name="label_current_password">Contraseña Actual</string>
+    <string name="label_new_password">Nueva Contraseña</string>
+    <string name="btn_save_changes">Guardar Cambios</string>
+    <string name="btn_cancel">Cancelar</string>
 </resources>
