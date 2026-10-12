@@ -20,8 +20,6 @@ data class ProfileUiState(
     val isDarkTheme: Boolean = false,
     val themeMode: String = "SYSTEM", // "DARK", "LIGHT", "SYSTEM"
     val selectedLanguage: String = "Español",
-    val currentPasswordInput: String = "",
-    val newPasswordInput: String = "",
     val isLoading: Boolean = false,
     val showThemeModeDialog: Boolean = false,
     val showEditProfileDialog: Boolean = false,
@@ -67,7 +65,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun setThemeMode(mode: String) { // "DARK", "LIGHT", "SYSTEM"
+    fun setThemeMode(mode: String) {
         viewModelScope.launch {
             sessionManager.setThemeMode(mode)
             _uiState.update { it.copy(themeMode = mode, showThemeModeDialog = false) }
@@ -85,7 +83,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun toggleEditProfileDialog(show: Boolean) {
-        _uiState.update { it.copy(showEditProfileDialog = show) }
+        _uiState.update { it.copy(showEditProfileDialog = show, errorMessage = null, successMessage = null) }
     }
 
     fun toggleLanguageDialog(show: Boolean) {
@@ -100,46 +98,61 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(showLogoutConfirmDialog = show) }
     }
 
-    fun onCurrentPasswordChanged(input: String) {
-        _uiState.update { it.copy(currentPasswordInput = input, errorMessage = null) }
-    }
-
-    fun onNewPasswordChanged(input: String) {
-        _uiState.update { it.copy(newPasswordInput = input, errorMessage = null) }
-    }
-
-    fun changePassword() {
+    fun updateProfileAndCredentials(
+        newName: String,
+        newCode: String,
+        currentPasswordInput: String,
+        newPasswordInput: String
+    ) {
         val user = _uiState.value.currentUser ?: return
-        val currentInput = _uiState.value.currentPasswordInput
-        val newInput = _uiState.value.newPasswordInput
-
-        if (currentInput.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa tu contraseña actual.") }
+        if (newName.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "El nombre no puede estar vacío.") }
             return
         }
 
-        if (currentInput != user.passwordHash) {
-            _uiState.update { it.copy(errorMessage = "La contraseña actual no es correcta.") }
+        if (newCode.length < 6) {
+            _uiState.update { it.copy(errorMessage = "El código de usuario debe tener al menos 6 caracteres.") }
             return
         }
 
-        if (newInput.length < 8 || !newInput.any { it.isUpperCase() } || !newInput.any { it.isDigit() } || !newInput.any { !it.isLetterOrDigit() }) {
-            _uiState.update { it.copy(errorMessage = "La nueva contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.") }
-            return
+        var updatedPassword = user.passwordHash
+
+        // If user is attempting to change password
+        if (newPasswordInput.isNotBlank() || currentPasswordInput.isNotBlank()) {
+            if (currentPasswordInput.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Ingresa tu contraseña actual para autorizar el cambio.") }
+                return
+            }
+
+            if (currentPasswordInput != user.passwordHash) {
+                _uiState.update { it.copy(errorMessage = "La contraseña actual es incorrecta.") }
+                return
+            }
+
+            if (newPasswordInput.length < 8 || !newPasswordInput.any { it.isUpperCase() } || !newPasswordInput.any { it.isDigit() } || !newPasswordInput.any { !it.isLetterOrDigit() }) {
+                _uiState.update { it.copy(errorMessage = "La nueva contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.") }
+                return
+            }
+
+            updatedPassword = newPasswordInput
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val updatedUser = user.copy(passwordHash = newInput)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val updatedUser = user.copy(
+                name = newName.trim(),
+                userCode = newCode.trim(),
+                passwordHash = updatedPassword
+            )
             userDao.insertUsers(listOf(updatedUser))
+            sessionManager.saveSession(updatedUser.userId, updatedUser.name, updatedUser.userCode)
 
             _uiState.update {
                 it.copy(
                     currentUser = updatedUser,
-                    currentPasswordInput = "",
-                    newPasswordInput = "",
                     isLoading = false,
-                    successMessage = "Contraseña actualizada con éxito"
+                    showEditProfileDialog = false,
+                    successMessage = "Perfil y credenciales actualizados con éxito"
                 )
             }
         }

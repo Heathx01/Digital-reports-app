@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -45,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -60,7 +62,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -83,7 +88,14 @@ fun ProfileScreen(
     val userCode = uiState.currentUser?.userCode ?: "215800"
     val context = LocalContext.current
 
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    // Profile Edit State
+    var editNameInput by remember { mutableStateOf(userName) }
+    var editCodeInput by remember { mutableStateOf(userCode) }
+    var currentPasswordInput by remember { mutableStateOf("") }
+    var newPasswordInput by remember { mutableStateOf("") }
+    var isCurrentPasswordVisible by remember { mutableStateOf(false) }
+    var isNewPasswordVisible by remember { mutableStateOf(false) }
+
     var avatarUri by remember { mutableStateOf<Uri?>(null) }
 
     // Launcher to select profile photo from gallery
@@ -99,6 +111,13 @@ fun ProfileScreen(
     if (uiState.isLoggedOut) {
         LaunchedEffect(Unit) {
             onLogout()
+        }
+    }
+
+    LaunchedEffect(uiState.currentUser) {
+        if (uiState.currentUser != null) {
+            editNameInput = uiState.currentUser?.name ?: ""
+            editCodeInput = uiState.currentUser?.userCode ?: ""
         }
     }
 
@@ -146,11 +165,12 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // User Info Header Card with Avatar Photo Edit
+            // User Info Header Card with Avatar Photo & Edit Trigger
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .clickable { viewModel.toggleEditProfileDialog(true) }
                     .padding(20.dp)
             ) {
                 Row(
@@ -162,20 +182,39 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // Avatar Photo Circle
+                        // Avatar Photo Circle with Badge
                         Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                                .clickable { photoPickerLauncher.launch("image/*") },
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.size(68.dp)
                         ) {
-                            Text(
-                                text = userName.take(1).uppercase(),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = userName.take(1).uppercase(),
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            // Camera Edit Badge Icon
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                    .align(Alignment.BottomEnd),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -195,11 +234,11 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Edit Photo Icon Button
-                    IconButton(onClick = { photoPickerLauncher.launch("image/*") }) {
+                    // Edit Pencil Icon Button
+                    IconButton(onClick = { viewModel.toggleEditProfileDialog(true) }) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Cambiar Foto de Perfil",
+                            contentDescription = "Editar Perfil y Credenciales",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -208,7 +247,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Settings List Card with Liquid Glass
+            // Non-redundant Settings List Card with Liquid Glass
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -216,21 +255,12 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
 
-                    // Cambiar Foto de Perfil
+                    // Unified Profile & Credentials Edit
                     SettingItemClickable(
                         icon = Icons.Outlined.Person,
-                        title = "Cambiar Foto de Perfil",
+                        title = "Perfil y Credenciales",
                         value = "Editar",
-                        onClick = { photoPickerLauncher.launch("image/*") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
-
-                    // Cambiar Contraseña
-                    SettingItemClickable(
-                        icon = Icons.Outlined.Lock,
-                        title = "Cambiar Contraseña",
-                        value = "Actualizar",
-                        onClick = { showChangePasswordDialog = true }
+                        onClick = { viewModel.toggleEditProfileDialog(true) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
@@ -302,6 +332,139 @@ fun ProfileScreen(
         }
     }
 
+    // UNIFIED EDIT PROFILE & CREDENTIALS DIALOG (Interactive & Professional)
+    if (uiState.showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleEditProfileDialog(false) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Editar Perfil y Credenciales", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Avatar & Photo Upload Section
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlass(cornerRadius = 16.dp)
+                            .clickable { photoPickerLauncher.launch("image/*") }
+                            .padding(14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = editNameInput.take(1).uppercase().ifBlank { "U" },
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text("Foto de Perfil", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("Toca para actualizar imagen de perfil", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    // Personal Info Fields
+                    Text("Información Personal", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
+                    OutlinedTextField(
+                        value = editNameInput,
+                        onValueChange = { editNameInput = it },
+                        label = { Text("Nombre Completo *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = editCodeInput,
+                        onValueChange = { editCodeInput = it },
+                        label = { Text("Código de Usuario (min. 6 dígitos) *") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                    // Password Credentials Section
+                    Text("Cambiar Contraseña (Opcional)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
+                    OutlinedTextField(
+                        value = currentPasswordInput,
+                        onValueChange = { currentPasswordInput = it },
+                        label = { Text("Contraseña Actual") },
+                        singleLine = true,
+                        visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
+                                Text(if (isCurrentPasswordVisible) "Ocultar" else "Mostrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = newPasswordInput,
+                        onValueChange = { newPasswordInput = it },
+                        label = { Text("Nueva Contraseña (min. 8 caract.)") },
+                        singleLine = true,
+                        visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
+                                Text(if (isNewPasswordVisible) "Ocultar" else "Mostrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (uiState.errorMessage != null) {
+                        Text(
+                            text = uiState.errorMessage ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateProfileAndCredentials(
+                            newName = editNameInput,
+                            newCode = editCodeInput,
+                            currentPasswordInput = currentPasswordInput,
+                            newPasswordInput = newPasswordInput
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.toggleEditProfileDialog(false) }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     // THEME MODE SELECTOR DIALOG (Oscuro, Claro, Sistema)
     if (uiState.showThemeModeDialog) {
         AlertDialog(
@@ -367,60 +530,6 @@ fun ProfileScreen(
             confirmButton = {
                 OutlinedButton(onClick = { viewModel.toggleThemeModeDialog(false) }) {
                     Text("Cerrar")
-                }
-            }
-        )
-    }
-
-    // CHANGE PASSWORD DIALOG
-    if (showChangePasswordDialog) {
-        AlertDialog(
-            onDismissRequest = { showChangePasswordDialog = false },
-            title = { Text("Cambiar Contraseña", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = uiState.currentPasswordInput,
-                        onValueChange = viewModel::onCurrentPasswordChanged,
-                        label = { Text("Contraseña Actual *") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.newPasswordInput,
-                        onValueChange = viewModel::onNewPasswordChanged,
-                        label = { Text("Nueva Contraseña (min. 8 caract.) *") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (uiState.errorMessage != null) {
-                        Text(
-                            text = uiState.errorMessage ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.changePassword()
-                        if (uiState.errorMessage == null) {
-                            showChangePasswordDialog = false
-                            Toast.makeText(context, "Contraseña actualizada con éxito", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Actualizar Contraseña", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showChangePasswordDialog = false }) {
-                    Text("Cancelar")
                 }
             }
         )
