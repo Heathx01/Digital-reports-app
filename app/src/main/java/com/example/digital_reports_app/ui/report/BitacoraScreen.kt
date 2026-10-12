@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.ui.report
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +25,17 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,18 +44,25 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
+import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
+import com.example.digital_reports_app.util.PdfReportGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +72,15 @@ fun BitacoraScreen(
     viewModel: ReportListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
     val filterOptions = listOf("TODOS", "COMPLETADOS", "PENDIENTES")
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+    var reportToDelete by remember { mutableStateOf<ReportEntity?>(null) }
+
+    val totalCount = uiState.reports.size
+    val completedCount = uiState.reports.count { it.status == "COMPLETADO" }
+    val pendingCount = uiState.reports.count { it.status != "COMPLETADO" }
 
     Scaffold(
         topBar = {
@@ -85,17 +108,36 @@ fun BitacoraScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Search Input with Outlined Line Art Search Icon
+            // Metrics Header Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .liquidGlass(cornerRadius = 14.dp, prominent = true)
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Totales: $totalCount", style = TelemetryMonoStyle, fontWeight = FontWeight.Bold)
+                    Text("Completados: $completedCount", style = TelemetryMonoStyle, color = StatusSuccessGreen, fontWeight = FontWeight.Bold)
+                    Text("Pendientes: $pendingCount", style = TelemetryMonoStyle, color = StatusWarningAmber, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Search Bar & Sort Dropdown
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = viewModel::onSearchQueryChanged,
-                    placeholder = { Text("Buscar por código o título...") },
+                    placeholder = { Text("Buscar expediente...") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -105,14 +147,60 @@ fun BitacoraScreen(
                         )
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Sort Button
+                Box {
+                    OutlinedButton(
+                        onClick = { sortMenuExpanded = true },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Ordenar ▼", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Más recientes primero") },
+                            onClick = {
+                                viewModel.onSortOptionSelected(ReportSortOption.NEWEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Más antiguos primero") },
+                            onClick = {
+                                viewModel.onSortOptionSelected(ReportSortOption.OLDEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Título (A - Z)") },
+                            onClick = {
+                                viewModel.onSortOptionSelected(ReportSortOption.TITLE_ASC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Por Estado") },
+                            onClick = {
+                                viewModel.onSortOptionSelected(ReportSortOption.STATUS)
+                                sortMenuExpanded = false
+                            }
+                        )
+                    }
+                }
             }
 
             // Filter Chips Row
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filterOptions) { filter ->
@@ -129,7 +217,17 @@ fun BitacoraScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Result Counter Indicator
+            if (uiState.filteredReports.isNotEmpty()) {
+                Text(
+                    text = "Mostrando ${uiState.filteredReports.size} expediente(s)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Reports List
             if (uiState.filteredReports.isEmpty()) {
@@ -140,7 +238,7 @@ fun BitacoraScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No hay expedientes registrados en la bitácora.",
+                        text = "No se encontraron expedientes con los criterios seleccionados.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -156,20 +254,62 @@ fun BitacoraScreen(
                     ) { report ->
                         BitacoraCardItem(
                             report = report,
-                            onClick = { onReportClick(report.reportId) }
+                            onClick = { onReportClick(report.reportId) },
+                            onOpenPdf = {
+                                val file = PdfReportGenerator.generatePdfReport(context, report)
+                                PdfReportGenerator.openPdfFile(context, file)
+                            },
+                            onPrintPdf = {
+                                val file = PdfReportGenerator.generatePdfReport(context, report)
+                                PdfReportGenerator.printPdfFile(context, file)
+                            },
+                            onDelete = {
+                                reportToDelete = report
+                            }
                         )
                     }
                 }
             }
         }
     }
+
+    // Delete Report Confirmation Dialog
+    reportToDelete?.let { report ->
+        AlertDialog(
+            onDismissRequest = { reportToDelete = null },
+            title = { Text("Eliminar Expediente", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar el reporte '${report.title}'? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteReport(report.reportId)
+                        Toast.makeText(context, "Reporte eliminado", Toast.LENGTH_SHORT).show()
+                        reportToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { reportToDelete = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun BitacoraCardItem(
     report: ReportEntity,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onOpenPdf: () -> Unit,
+    onPrintPdf: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -217,8 +357,8 @@ private fun BitacoraCardItem(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = report.dateFormatted,
-                        style = MaterialTheme.typography.labelSmall,
+                        text = "${report.reportId} • ${report.dateFormatted}",
+                        style = TelemetryMonoStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -227,13 +367,51 @@ private fun BitacoraCardItem(
             Column(
                 horizontalAlignment = Alignment.End
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Opciones",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Context Menu
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("👁️ Ver Detalle Dictamen") },
+                            onClick = {
+                                menuExpanded = false
+                                onClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("📄 Abrir en Lector PDF") },
+                            onClick = {
+                                menuExpanded = false
+                                onOpenPdf()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("🖨️ Previsualizar / Imprimir") },
+                            onClick = {
+                                menuExpanded = false
+                                onPrintPdf()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("🗑️ Eliminar Reporte", color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
 
                 val isCompleted = report.status == "COMPLETADO"
                 val badgeText = if (isCompleted) StatusSuccessGreen else StatusWarningAmber

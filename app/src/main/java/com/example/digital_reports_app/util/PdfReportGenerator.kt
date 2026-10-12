@@ -8,9 +8,18 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
+import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
+import android.print.PrintManager
 import androidx.core.content.FileProvider
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 
 object PdfReportGenerator {
@@ -18,7 +27,6 @@ object PdfReportGenerator {
     fun generatePdfReport(context: Context, report: ReportEntity): File {
         val pdfDocument = PdfDocument()
 
-        // Standard A4 dimensions in points: 595 x 842
         val pageWidth = 595
         val pageHeight = 842
         val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
@@ -28,18 +36,18 @@ object PdfReportGenerator {
         val paint = Paint()
 
         // 1. Header Banner
-        paint.color = Color.rgb(26, 35, 126) // Deep Indigo Header
+        paint.color = Color.rgb(26, 35, 126)
         canvas.drawRect(0f, 0f, pageWidth.toFloat(), 100f, paint)
 
         // Header Title
         paint.color = Color.WHITE
         paint.textSize = 24f
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        canvas.drawText("DIGITAL REPORTS", 30f, 45f, paint)
+        canvas.drawText("DOCUFIELD ENTERPRISE", 30f, 45f, paint)
 
         paint.textSize = 14f
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        canvas.drawText("Sistema de Reportes y Control Digital", 30f, 70f, paint)
+        canvas.drawText("Sistema de Inspecciones y Control Digital", 30f, 70f, paint)
 
         // Date right-aligned in header
         paint.textSize = 11f
@@ -82,12 +90,12 @@ object PdfReportGenerator {
         paint.color = Color.rgb(33, 33, 33)
         paint.textSize = 13f
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        canvas.drawText("INFORMACIÓN DEL TRABAJADOR Y CATEGORÍA", 30f, currentY, paint)
+        canvas.drawText("INFORMACIÓN DEL INSPECTOR Y CATEGORÍA", 30f, currentY, paint)
 
         currentY += 25f
         paint.textSize = 12f
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        canvas.drawText("Código de Trabajador: ${report.authorCode}", 30f, currentY, paint)
+        canvas.drawText("Código de Inspector: ${report.authorCode}", 30f, currentY, paint)
         canvas.drawText("Categoría: ${report.category}", 320f, currentY, paint)
 
         currentY += 20f
@@ -161,12 +169,11 @@ object PdfReportGenerator {
 
         paint.textSize = 10f
         paint.color = Color.rgb(100, 100, 100)
-        canvas.drawText("Documento generado oficialmente por Digital Reports App", 30f, footerY, paint)
+        canvas.drawText("Documento generado por DocuField Enterprise App", 30f, footerY, paint)
         canvas.drawText("Página 1 de 1", (pageWidth - 100).toFloat(), footerY, paint)
 
         pdfDocument.finishPage(page)
 
-        // Save file to external files directory
         val reportsDir = File(context.getExternalFilesDir(null), "reports")
         if (!reportsDir.exists()) {
             reportsDir.mkdirs()
@@ -191,10 +198,61 @@ object PdfReportGenerator {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        val chooserIntent = Intent.createChooser(intent, "Abrir o compartir PDF con...").apply {
+        val chooserIntent = Intent.createChooser(intent, "Abrir con lector PDF del dispositivo...").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
         context.startActivity(chooserIntent)
+    }
+
+    fun printPdfFile(context: Context, pdfFile: File) {
+        val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+        if (printManager == null) {
+            openPdfFile(context, pdfFile)
+            return
+        }
+
+        val printAdapter = object : PrintDocumentAdapter() {
+            override fun onLayout(
+                oldAttributes: PrintAttributes?,
+                newAttributes: PrintAttributes,
+                cancellationSignal: CancellationSignal?,
+                callback: LayoutResultCallback,
+                extras: Bundle?
+            ) {
+                if (cancellationSignal?.isCanceled == true) {
+                    callback.onLayoutCancelled()
+                    return
+                }
+                val builder = PrintDocumentInfo.Builder("Reporte_${pdfFile.name}")
+                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .setPageCount(1)
+                callback.onLayoutFinished(builder.build(), true)
+            }
+
+            override fun onWrite(
+                pages: Array<out PageRange>?,
+                destination: ParcelFileDescriptor,
+                cancellationSignal: CancellationSignal?,
+                callback: WriteResultCallback
+            ) {
+                try {
+                    FileInputStream(pdfFile).use { input ->
+                        FileOutputStream(destination.fileDescriptor).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    callback.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                } catch (e: Exception) {
+                    callback.onWriteFailed(e.message)
+                }
+            }
+        }
+
+        printManager.print(
+            "Reporte_DocuField_${pdfFile.name}",
+            printAdapter,
+            PrintAttributes.Builder().build()
+        )
     }
 }

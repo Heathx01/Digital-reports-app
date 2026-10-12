@@ -15,10 +15,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class ReportSortOption {
+    NEWEST, OLDEST, TITLE_ASC, TITLE_DESC, STATUS
+}
+
 data class ReportListUiState(
     val reports: List<ReportEntity> = emptyList(),
     val filteredReports: List<ReportEntity> = emptyList(),
     val selectedStatusFilter: String = "TODOS",
+    val selectedSortOption: ReportSortOption = ReportSortOption.NEWEST,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val currentUser: UserEntity? = null
@@ -52,7 +57,12 @@ class ReportListViewModel @Inject constructor(
 
             reportRepository.getReports(authorCode, isAdmin).collect { reportsList ->
                 _uiState.update { state ->
-                    val filtered = applyFilters(reportsList, state.selectedStatusFilter, state.searchQuery)
+                    val filtered = applyFiltersAndSort(
+                        reportsList,
+                        state.selectedStatusFilter,
+                        state.searchQuery,
+                        state.selectedSortOption
+                    )
                     state.copy(
                         reports = reportsList,
                         filteredReports = filtered,
@@ -65,30 +75,53 @@ class ReportListViewModel @Inject constructor(
 
     fun onStatusFilterSelected(status: String) {
         _uiState.update { state ->
-            val filtered = applyFilters(state.reports, status, state.searchQuery)
+            val filtered = applyFiltersAndSort(state.reports, status, state.searchQuery, state.selectedSortOption)
             state.copy(selectedStatusFilter = status, filteredReports = filtered)
+        }
+    }
+
+    fun onSortOptionSelected(sortOption: ReportSortOption) {
+        _uiState.update { state ->
+            val filtered = applyFiltersAndSort(state.reports, state.selectedStatusFilter, state.searchQuery, sortOption)
+            state.copy(selectedSortOption = sortOption, filteredReports = filtered)
         }
     }
 
     fun onSearchQueryChanged(query: String) {
         _uiState.update { state ->
-            val filtered = applyFilters(state.reports, state.selectedStatusFilter, query)
+            val filtered = applyFiltersAndSort(state.reports, state.selectedStatusFilter, query, state.selectedSortOption)
             state.copy(searchQuery = query, filteredReports = filtered)
         }
     }
 
-    private fun applyFilters(
+    fun deleteReport(reportId: String) {
+        viewModelScope.launch {
+            reportRepository.deleteReport(reportId)
+        }
+    }
+
+    private fun applyFiltersAndSort(
         list: List<ReportEntity>,
         statusFilter: String,
-        query: String
+        query: String,
+        sortOption: ReportSortOption
     ): List<ReportEntity> {
-        return list.filter { report ->
+        val filtered = list.filter { report ->
             val matchesStatus = if (statusFilter == "TODOS") true else report.status == statusFilter
             val matchesQuery = query.isBlank() ||
                     report.title.contains(query, ignoreCase = true) ||
                     report.category.contains(query, ignoreCase = true) ||
-                    report.description.contains(query, ignoreCase = true)
+                    report.description.contains(query, ignoreCase = true) ||
+                    report.reportId.contains(query, ignoreCase = true)
             matchesStatus && matchesQuery
+        }
+
+        return when (sortOption) {
+            ReportSortOption.NEWEST -> filtered.sortedByDescending { it.timestamp }
+            ReportSortOption.OLDEST -> filtered.sortedBy { it.timestamp }
+            ReportSortOption.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
+            ReportSortOption.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
+            ReportSortOption.STATUS -> filtered.sortedBy { it.status }
         }
     }
 }
