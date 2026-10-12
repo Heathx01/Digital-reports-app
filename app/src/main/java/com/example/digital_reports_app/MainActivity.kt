@@ -28,9 +28,15 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             val systemDark = isSystemInDarkTheme()
-            val isDarkTheme by mainViewModel.isDarkTheme.collectAsState(initial = systemDark)
+            val themeMode by mainViewModel.themeMode.collectAsState(initial = "SYSTEM")
 
-            DigitalreportsappTheme(darkTheme = isDarkTheme) {
+            val darkTheme = when (themeMode) {
+                "DARK" -> true
+                "LIGHT" -> false
+                else -> systemDark
+            }
+
+            DigitalreportsappTheme(darkTheme = darkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
                 val destination = startDestination
 

@@ -24,6 +24,7 @@ class MainViewModel @Inject constructor(
     val startDestination: StateFlow<String?> = _startDestination.asStateFlow()
 
     val isDarkTheme: Flow<Boolean> = sessionManager.isDarkTheme
+    val themeMode: Flow<String> = sessionManager.themeMode
 
     init {
         checkSession()

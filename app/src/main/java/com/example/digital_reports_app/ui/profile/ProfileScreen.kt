@@ -102,6 +102,12 @@ fun ProfileScreen(
         }
     }
 
+    val themeModeLabel = when (uiState.themeMode) {
+        "DARK" -> "Oscuro"
+        "LIGHT" -> "Claro"
+        else -> "Sistema"
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -156,7 +162,7 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // Avatar Photo Circle with click to change photo
+                        // Avatar Photo Circle
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
@@ -228,19 +234,12 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Dark Theme Mode Toggle
-                    SettingItemToggle(
+                    // Theme Mode Selector Dropdown Modal (Oscuro, Claro, Sistema)
+                    SettingItemValue(
                         icon = Icons.Outlined.Info,
-                        title = "Modo Oscuro (Socavón)",
-                        checked = uiState.isDarkTheme,
-                        onCheckedChange = { isChecked ->
-                            viewModel.setDarkTheme(isChecked)
-                            Toast.makeText(
-                                context,
-                                if (isChecked) "Modo Oscuro activado" else "Modo Claro activado",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        title = "Tema de la Interfaz",
+                        value = themeModeLabel,
+                        onClick = { viewModel.toggleThemeModeDialog(true) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
@@ -303,6 +302,76 @@ fun ProfileScreen(
         }
     }
 
+    // THEME MODE SELECTOR DIALOG (Oscuro, Claro, Sistema)
+    if (uiState.showThemeModeDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.toggleThemeModeDialog(false) },
+            title = { Text("Tema de la Interfaz", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Option 1: Oscuro
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setThemeMode("DARK")
+                                Toast.makeText(context, "Tema cambiado a Oscuro", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🌙 Oscuro", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        if (uiState.themeMode == "DARK") {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    // Option 2: Claro
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setThemeMode("LIGHT")
+                                Toast.makeText(context, "Tema cambiado a Claro", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("☀️ Claro", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        if (uiState.themeMode == "LIGHT") {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    // Option 3: Sistema
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setThemeMode("SYSTEM")
+                                Toast.makeText(context, "Tema del sistema aplicado", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("📱 Sistema (Predeterminado)", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        if (uiState.themeMode == "SYSTEM") {
+                            Icon(imageVector = Icons.Outlined.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                OutlinedButton(onClick = { viewModel.toggleThemeModeDialog(false) }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
+
     // CHANGE PASSWORD DIALOG
     if (showChangePasswordDialog) {
         AlertDialog(
@@ -357,7 +426,7 @@ fun ProfileScreen(
         )
     }
 
-    // LANGUAGE SELECTOR DIALOG (Dynamic Language Switch)
+    // LANGUAGE SELECTOR DIALOG
     if (uiState.showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleLanguageDialog(false) },

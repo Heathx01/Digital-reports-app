@@ -22,6 +22,7 @@ class SessionManager @Inject constructor(
         private val KEY_USER_NAME = stringPreferencesKey("current_user_name")
         private val KEY_USER_CODE = stringPreferencesKey("current_user_code")
         private val KEY_IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
+        private val KEY_THEME_MODE = stringPreferencesKey("app_theme_mode") // "DARK", "LIGHT", "SYSTEM"
         private val KEY_LANGUAGE = stringPreferencesKey("app_language")
     }
 
@@ -41,13 +42,25 @@ class SessionManager @Inject constructor(
         preferences[KEY_IS_DARK_THEME] ?: false
     }
 
+    val themeMode: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_THEME_MODE] ?: "SYSTEM"
+    }
+
     val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[KEY_LANGUAGE] ?: "Español"
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_THEME_MODE] = mode
+            preferences[KEY_IS_DARK_THEME] = (mode == "DARK")
+        }
     }
 
     suspend fun setDarkTheme(isDark: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_IS_DARK_THEME] = isDark
+            preferences[KEY_THEME_MODE] = if (isDark) "DARK" else "LIGHT"
         }
     }
 

@@ -18,10 +18,12 @@ import javax.inject.Inject
 data class ProfileUiState(
     val currentUser: UserEntity? = null,
     val isDarkTheme: Boolean = false,
+    val themeMode: String = "SYSTEM", // "DARK", "LIGHT", "SYSTEM"
     val selectedLanguage: String = "Español",
     val currentPasswordInput: String = "",
     val newPasswordInput: String = "",
     val isLoading: Boolean = false,
+    val showThemeModeDialog: Boolean = false,
     val showEditProfileDialog: Boolean = false,
     val showLanguageDialog: Boolean = false,
     val showUpdateVersionDialog: Boolean = false,
@@ -53,8 +55,8 @@ class ProfileViewModel @Inject constructor(
                 _uiState.update { it.copy(currentUser = user) }
             }
 
-            sessionManager.isDarkTheme.collect { isDark ->
-                _uiState.update { it.copy(isDarkTheme = isDark) }
+            sessionManager.themeMode.collect { mode ->
+                _uiState.update { it.copy(themeMode = mode, isDarkTheme = (mode == "DARK")) }
             }
         }
 
@@ -65,10 +67,15 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun setDarkTheme(isDark: Boolean) {
+    fun setThemeMode(mode: String) { // "DARK", "LIGHT", "SYSTEM"
         viewModelScope.launch {
-            sessionManager.setDarkTheme(isDark)
+            sessionManager.setThemeMode(mode)
+            _uiState.update { it.copy(themeMode = mode, showThemeModeDialog = false) }
         }
+    }
+
+    fun toggleThemeModeDialog(show: Boolean) {
+        _uiState.update { it.copy(showThemeModeDialog = show) }
     }
 
     fun setLanguage(language: String) {
