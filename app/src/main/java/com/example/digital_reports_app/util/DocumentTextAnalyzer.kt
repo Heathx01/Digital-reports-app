@@ -2,16 +2,26 @@ package com.example.digital_reports_app.util
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.Rect
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import com.example.digital_reports_app.domain.model.PageSize
-import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 enum class FormFieldType {
     TEXT, NUMBER, DROPDOWN, CHECKBOX
@@ -36,31 +46,46 @@ data class AnalyzedDocumentResult(
 
 object DocumentTextAnalyzer {
 
+    private const val TAG = "DocumentTextAnalyzer"
+
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     /**
      * Extrae el texto real impreso en un archivo PDF utilizando PDFTextStripper
      * e infiere el título y las etiquetas reales del formulario.
      */
-    fun analyzePdfUri(context: Context, pdfUri: Uri, templateIndex: Int): AnalyzedDocumentResult {
+    suspend fun analyzePdfUri(context: Context, pdfUri: Uri, templateIndex: Int): AnalyzedDocumentResult {
         return try {
-            val extractedText = context.contentResolver.openInputStream(pdfUri)?.use { inputStream ->
-                val pdDoc = PDDocument.load(inputStream)
-                val stripper = PDFTextStripper()
-                val text = stripper.getText(pdDoc)
-                pdDoc.close()
-                text
-            } ?: ""
+            val extractedText = withContext(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openInputStream(pdfUri)?.use { inputStream ->
+                        PDDocument.load(inputStream).use { pdDoc ->
+                            PDFTextStripper().getText(pdDoc)
+                        }
+                    } ?: ""
+                } catch (e: Exception) {
+                    Log.w(TAG, "PDFBox no pudo extraer texto, se usará OCR", e)
+                    ""
+                }
+            }
 
             val rawLines = extractedText.split("\n")
                 .map { it.trim().replace("\r", "") }
                 .filter { it.length > 2 && !it.contains("PÁGINA", ignoreCase = true) }
 
             if (rawLines.isEmpty()) {
-                return analyzeScannedBitmapWithMlKit(
-                    Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888),
-                    templateIndex
-                )
+                // PDF escaneado (solo imagen): renderizar la página real y aplicar OCR
+                val pageBitmap = withContext(Dispatchers.IO) { renderFirstPdfPage(context, pdfUri) }
+                return if (pageBitmap != null) {
+                    analyzeScannedBitmapWithMlKit(pageBitmap, templateIndex)
+                } else {
+                    AnalyzedDocumentResult(
+                        templateTitle = "Formato PDF #$templateIndex",
+                        category = "Inspección",
+                        description = "No se pudo leer el PDF; se cargaron campos por defecto.",
+                        extractedFields = createDefaultFields()
+                    )
+                }
             }
 
             // Extract Title from PDF Text
@@ -137,7 +162,8 @@ object DocumentTextAnalyzer {
                 description = "Plantilla generada por extracción de texto real de archivo PDF (${fieldsList.size} campos extraídos).",
                 extractedFields = fieldsList
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Fallo análisis de PDF", e)
             AnalyzedDocumentResult(
                 templateTitle = "Formato PDF Escaneado #$templateIndex",
                 category = "Inspección",
@@ -152,14 +178,14 @@ object DocumentTextAnalyzer {
      * Calcula los Bounding Boxes (Cajas Delimitadoras X,Y en puntos PostScript A4)
      * para superponer los datos exactamente sobre las casillas físicas.
      */
-    fun analyzeScannedBitmapWithMlKit(
+    suspend fun analyzeScannedBitmapWithMlKit(
         bitmap: Bitmap,
         templateIndex: Int,
         pageSize: PageSize = PageSize.A4
     ): AnalyzedDocumentResult {
         return try {
             val image = InputImage.fromBitmap(bitmap, 0)
-            val visionText: Text = Tasks.await(recognizer.process(image))
+            val visionText: Text = recognizer.process(image).awaitResult()
 
             val bitmapWidth = bitmap.width.toFloat()
             val bitmapHeight = bitmap.height.toFloat()
@@ -254,7 +280,8 @@ object DocumentTextAnalyzer {
                 description = "Plantilla analizada por OCR con Bounding Boxes de ML Kit (${textLines.size} líneas detectadas).",
                 extractedFields = fieldsList
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Fallo OCR ML Kit", e)
             val defaultFields = createDefaultFields()
             AnalyzedDocumentResult(
                 templateTitle = "Formato Escaneado #$templateIndex",
@@ -265,8 +292,81 @@ object DocumentTextAnalyzer {
         }
     }
 
-    fun analyzeScannedBitmap(bitmap: Bitmap, templateIndex: Int): AnalyzedDocumentResult {
+    suspend fun analyzeScannedBitmap(bitmap: Bitmap, templateIndex: Int): AnalyzedDocumentResult {
         return analyzeScannedBitmapWithMlKit(bitmap, templateIndex)
+    }
+
+    /**
+     * Decodifica una imagen (URI) en resolución completa, corrigiendo la rotación EXIF
+     * y limitando el lado mayor para no agotar memoria.
+     */
+    suspend fun decodeBitmapFromUri(context: Context, uri: Uri, maxSide: Int = 2400): Bitmap? =
+        withContext(Dispatchers.IO) {
+            try {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                var sample = 1
+                while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxSide * 2) sample *= 2
+                val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+                val raw = context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, opts)
+                } ?: return@withContext null
+
+                val rotation = try {
+                    context.contentResolver.openInputStream(uri)?.use { s ->
+                        when (ExifInterface(s).getAttributeInt(
+                            ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
+                        )) {
+                            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                            else -> 0f
+                        }
+                    } ?: 0f
+                } catch (_: Exception) { 0f }
+
+                val scale = maxSide.toFloat() / maxOf(raw.width, raw.height)
+                val matrix = Matrix().apply {
+                    if (scale < 1f) postScale(scale, scale)
+                    if (rotation != 0f) postRotate(rotation)
+                }
+                if (matrix.isIdentity) raw
+                else Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error decodificando imagen", e)
+                null
+            }
+        }
+
+    /** Renderiza la primera página de un PDF a Bitmap (para PDFs escaneados sin texto). */
+    private fun renderFirstPdfPage(context: Context, pdfUri: Uri): Bitmap? {
+        return try {
+            context.contentResolver.openFileDescriptor(pdfUri, "r")?.use { pfd ->
+                PdfRenderer(pfd).use { renderer ->
+                    if (renderer.pageCount == 0) return null
+                    renderer.openPage(0).use { page ->
+                        val scale = 2000f / maxOf(page.width, page.height)
+                        val bmp = Bitmap.createBitmap(
+                            (page.width * scale).toInt().coerceAtLeast(1),
+                            (page.height * scale).toInt().coerceAtLeast(1),
+                            Bitmap.Config.ARGB_8888
+                        )
+                        bmp.eraseColor(android.graphics.Color.WHITE)
+                        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bmp
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error renderizando PDF", e)
+            null
+        }
+    }
+
+    private suspend fun <T> Task<T>.awaitResult(): T = suspendCancellableCoroutine { cont ->
+        addOnSuccessListener { cont.resume(it) }
+        addOnFailureListener { cont.resumeWithException(it) }
+        addOnCanceledListener { cont.cancel() }
     }
 
     fun createDefaultFields(): List<CustomFormField> {

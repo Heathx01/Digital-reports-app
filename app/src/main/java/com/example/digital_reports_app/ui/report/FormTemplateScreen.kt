@@ -4,7 +4,12 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
+import androidx.core.content.FileProvider
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -146,53 +151,96 @@ fun FormTemplateScreen(
         selectedTemplateIds.clear()
     }
 
-    // PDF File Upload Launcher: Analyzes PDF text lines and extracts real labels into Dialog
+    val scope = rememberCoroutineScope()
+    var isAnalyzing by remember { mutableStateOf(false) }
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // PDF File Upload Launcher: analiza el PDF fuera del hilo principal
     val pdfPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             val nextIndex = templates.size + 1
-            val pdfResult = DocumentTextAnalyzer.analyzePdfUri(context, uri, nextIndex)
+            scope.launch {
+                isAnalyzing = true
+                try {
+                    val pdfResult = DocumentTextAnalyzer.analyzePdfUri(context, uri, nextIndex)
 
-            newTemplateTitle = pdfResult.templateTitle
-            newTemplateCategory = pdfResult.category
-            newTemplateDescription = pdfResult.description
-            newTemplateFields.clear()
-            newTemplateFields.addAll(pdfResult.extractedFields)
+                    newTemplateTitle = pdfResult.templateTitle
+                    newTemplateCategory = pdfResult.category
+                    newTemplateDescription = pdfResult.description
+                    newTemplateFields.clear()
+                    newTemplateFields.addAll(pdfResult.extractedFields)
 
-            showScanDocumentDialog = true
-            Toast.makeText(
-                context,
-                "¡PDF analizado! Se extrajeron ${pdfResult.extractedFields.size} campos reales.",
-                Toast.LENGTH_LONG
-            ).show()
+                    showScanDocumentDialog = true
+                    Toast.makeText(
+                        context,
+                        "¡PDF analizado! Se extrajeron ${pdfResult.extractedFields.size} campos.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } catch (e: Exception) {
+                    Log.e("FormTemplateScreen", "Error analizando PDF", e)
+                    Toast.makeText(context, "No se pudo analizar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
+                } finally {
+                    isAnalyzing = false
+                }
+            }
         } else {
             Toast.makeText(context, "Carga de PDF cancelada", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Camera TakePicturePreview Launcher: Analyzes photo OCR and loads fields into Dialog
+    // Cámara en resolución completa (TakePicture + FileProvider) y OCR asíncrono
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap: Bitmap? ->
-        if (bitmap != null) {
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        val photoUri = pendingPhotoUri
+        if (success && photoUri != null) {
             val nextIndex = templates.size + 1
-            val result = DocumentTextAnalyzer.analyzeScannedBitmap(bitmap, nextIndex)
+            scope.launch {
+                isAnalyzing = true
+                try {
+                    val bitmap = DocumentTextAnalyzer.decodeBitmapFromUri(context, photoUri)
+                    if (bitmap == null) {
+                        Toast.makeText(context, "No se pudo leer la foto capturada", Toast.LENGTH_LONG).show()
+                    } else {
+                        val result = DocumentTextAnalyzer.analyzeScannedBitmap(bitmap, nextIndex)
 
-            newTemplateTitle = result.templateTitle
-            newTemplateCategory = result.category
-            newTemplateDescription = result.description
-            newTemplateFields.clear()
-            newTemplateFields.addAll(result.extractedFields)
+                        newTemplateTitle = result.templateTitle
+                        newTemplateCategory = result.category
+                        newTemplateDescription = result.description
+                        newTemplateFields.clear()
+                        newTemplateFields.addAll(result.extractedFields)
 
-            showScanDocumentDialog = true
-            Toast.makeText(
-                context,
-                "¡Foto analizada! Se extrajeron ${result.extractedFields.size} campos del formato.",
-                Toast.LENGTH_LONG
-            ).show()
+                        showScanDocumentDialog = true
+                        Toast.makeText(
+                            context,
+                            "¡Foto analizada! Se extrajeron ${result.extractedFields.size} campos del formato.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e("FormTemplateScreen", "Error analizando foto", e)
+                    Toast.makeText(context, "No se pudo analizar la foto: ${e.message}", Toast.LENGTH_LONG).show()
+                } finally {
+                    isAnalyzing = false
+                }
+            }
         } else {
             Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val launchCamera = {
+        try {
+            val dir = File(context.cacheDir, "scans").apply { mkdirs() }
+            val file = File(dir, "scan_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            pendingPhotoUri = uri
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            Log.e("FormTemplateScreen", "No se pudo abrir la cámara", e)
+            Toast.makeText(context, "No se pudo iniciar la cámara: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -201,11 +249,7 @@ fun FormTemplateScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            try {
-                cameraLauncher.launch(null)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error al abrir la cámara: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            launchCamera()
         } else {
             Toast.makeText(context, "Se requiere permiso de cámara para escanear el formato impreso.", Toast.LENGTH_LONG).show()
         }
@@ -218,14 +262,25 @@ fun FormTemplateScreen(
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            try {
-                cameraLauncher.launch(null)
-            } catch (e: Exception) {
-                Toast.makeText(context, "No se pudo iniciar la cámara: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            launchCamera()
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    if (isAnalyzing) {
+        AlertDialog(
+            onDismissRequest = {},
+            confirmButton = {},
+            title = { Text("Analizando documento...") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Extrayendo texto y campos del formato")
+                }
+            }
+        )
     }
 
     LaunchedEffect(uiState.isSuccess) {

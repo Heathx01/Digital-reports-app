@@ -76,6 +76,7 @@ dependencies {
 
     // PDFBox
     implementation(libs.pdfbox.android)
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // ML Kit Text Recognition & Document Scanner for OCR Scanned Document Analysis
     implementation("com.google.mlkit:text-recognition:16.0.1")
