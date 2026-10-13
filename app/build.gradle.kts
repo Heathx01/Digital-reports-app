@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.digital_reports_app"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -31,6 +31,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -43,6 +44,8 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.runtime)
@@ -75,8 +78,9 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
-    // PDFBox
+    // PDFBox & Apache POI for Excel (.xlsx)
     implementation(libs.pdfbox.android)
+    implementation("org.apache.poi:poi-ooxml:5.2.3")
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
