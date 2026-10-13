@@ -34,11 +34,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -94,8 +91,7 @@ data class ReportTemplateItem(
     var category: String,
     var description: String,
     val icon: ImageVector = Icons.Outlined.Edit,
-    val fields: MutableList<CustomFormField> = mutableStateListOf(),
-    val isPredefined: Boolean = false
+    val fields: MutableList<CustomFormField> = mutableStateListOf()
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -108,7 +104,9 @@ fun FormTemplateScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val isAdmin = uiState.isAdmin
 
+    // Observe templates directly from Room DB
     val templates = uiState.savedTemplates
 
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
@@ -147,9 +145,13 @@ fun FormTemplateScreen(
     }
 
     val startSelection = { templateId: String ->
-        isSelectionMode = true
-        selectedTemplateIds.clear()
-        selectedTemplateIds.add(templateId)
+        if (isAdmin) {
+            isSelectionMode = true
+            selectedTemplateIds.clear()
+            selectedTemplateIds.add(templateId)
+        } else {
+            Toast.makeText(context, "Solo los usuarios administradores pueden editar o eliminar plantillas.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val clearSelection = {
@@ -216,25 +218,29 @@ fun FormTemplateScreen(
     }
 
     val triggerCameraOrScan = {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (hasPermission) {
-            try {
-                val scansDir = File(context.cacheDir, "scans")
-                scansDir.mkdirs()
-                val photoFile = File(scansDir, "scan_photo_${System.currentTimeMillis()}.jpg")
-                val photoUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-                currentPhotoFile = photoFile
-                currentPhotoUri = photoUri
-                fullResPhotoLauncher.launch(photoUri)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        if (!isAdmin) {
+            Toast.makeText(context, "Solo los usuarios administradores pueden escanear nuevas plantillas.", Toast.LENGTH_SHORT).show()
         } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (hasPermission) {
+                try {
+                    val scansDir = File(context.cacheDir, "scans")
+                    scansDir.mkdirs()
+                    val photoFile = File(scansDir, "scan_photo_${System.currentTimeMillis()}.jpg")
+                    val photoUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                    currentPhotoFile = photoFile
+                    currentPhotoUri = photoUri
+                    fullResPhotoLauncher.launch(photoUri)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
         }
     }
 
@@ -277,7 +283,7 @@ fun FormTemplateScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Selecciona, escanea, carga PDF o mantén presionado para gestionar",
+                                text = if (isAdmin) "Selecciona, escanea, carga PDF o gestiona plantillas" else "Selecciona una plantilla para crear tu reporte",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -315,7 +321,7 @@ fun FormTemplateScreen(
                     }
                 },
                 actions = {
-                    if (isSelectionMode && selectedTemplate == null) {
+                    if (isSelectionMode && selectedTemplate == null && isAdmin) {
                         if (selectedTemplateIds.size == 1) {
                             IconButton(
                                 onClick = {
@@ -387,184 +393,206 @@ fun FormTemplateScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        // Scan Document Button
-                        OutlinedButton(
-                            onClick = { triggerCameraOrScan() },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                    if (isAdmin) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Scan Document Button
+                            OutlinedButton(
+                                onClick = { triggerCameraOrScan() },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
 
-                        // Upload PDF Button
-                        OutlinedButton(
-                            onClick = {
-                                try {
-                                    pdfPickerLauncher.launch(arrayOf("application/pdf"))
-                                } catch (_: Exception) {
-                                    pdfPickerLauncher.launch(arrayOf("*/*"))
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Cargar PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                            // Upload PDF Button
+                            OutlinedButton(
+                                onClick = {
+                                    try {
+                                        pdfPickerLauncher.launch(arrayOf("application/pdf"))
+                                    } catch (_: Exception) {
+                                        pdfPickerLauncher.launch(arrayOf("*/*"))
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Cargar PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
 
-                        // Create New Template Button
-                        Button(
-                            onClick = {
-                                newTemplateTitle = ""
-                                newTemplateCategory = "Inspección"
-                                newTemplateDescription = ""
-                                newTemplateFields.clear()
-                                newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
-                                showCreateTemplateDialog = true
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Add,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text("Nueva", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            // Create New Template Button
+                            Button(
+                                onClick = {
+                                    newTemplateTitle = ""
+                                    newTemplateCategory = "Inspección"
+                                    newTemplateDescription = ""
+                                    newTemplateFields.clear()
+                                    newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
+                                    showCreateTemplateDialog = true
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Add,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("Nueva", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                templates.forEach { template ->
-                    val isSelected = selectedTemplateIds.contains(template.id)
-
+                if (templates.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .liquidGlass(
-                                cornerRadius = 18.dp,
-                                prominent = true
-                            )
-                            .then(
-                                if (isSelected) {
-                                    Modifier.border(
-                                        width = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = RoundedCornerShape(18.dp)
-                                    )
-                                } else Modifier
-                            )
-                            .combinedClickable(
-                                onClick = {
-                                    if (isSelectionMode) {
-                                        toggleSelection(template.id)
-                                    } else {
-                                        selectedTemplate = template
-                                        activeFormFields.clear()
-                                        activeFormFields.addAll(template.fields.map { it.copy() })
-                                        viewModel.onTitleChanged(template.title)
-                                        viewModel.onCategoryChanged(template.category)
-                                    }
-                                },
-                                onLongClick = {
-                                    if (template.isPredefined) {
-                                        Toast.makeText(
-                                            context,
-                                            "Las plantillas predefinidas no se pueden eliminar.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else if (!isSelectionMode) {
-                                        startSelection(template.id)
-                                    } else {
-                                        toggleSelection(template.id)
-                                    }
-                                }
-                            )
-                            .padding(18.dp)
+                            .liquidGlass(cornerRadius = 16.dp)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
+                        Text(
+                            text = if (isAdmin)
+                                "No hay plantillas registradas aún. Presiona 'Escanear', 'Cargar PDF' o 'Nueva' para registrar las plantillas oficiales de la empresa."
+                            else
+                                "No hay plantillas registradas por el administrador aún.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    templates.forEach { template ->
+                        val isSelected = selectedTemplateIds.contains(template.id)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .liquidGlass(
+                                    cornerRadius = 18.dp,
+                                    prominent = true
+                                )
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(
+                                            width = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(18.dp)
+                                        )
+                                    } else Modifier
+                                )
+                                .combinedClickable(
+                                    onClick = {
+                                        if (isSelectionMode) {
+                                            toggleSelection(template.id)
+                                        } else {
+                                            selectedTemplate = template
+                                            activeFormFields.clear()
+                                            activeFormFields.addAll(template.fields.map { it.copy() })
+                                            viewModel.onTitleChanged(template.title)
+                                            viewModel.onCategoryChanged(template.category)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (isAdmin) {
+                                            if (!isSelectionMode) {
+                                                startSelection(template.id)
+                                            } else {
+                                                toggleSelection(template.id)
+                                            }
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Solo los usuarios administradores pueden editar o eliminar plantillas.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                )
+                                .padding(18.dp)
+                        ) {
+                            Column {
                                 Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    if (isSelectionMode) {
-                                        Checkbox(
-                                            checked = isSelected,
-                                            onCheckedChange = { toggleSelection(template.id) }
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                                        contentAlignment = Alignment.Center
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Icon(
-                                            imageVector = template.icon,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(22.dp)
-                                        )
+                                        if (isSelectionMode) {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = { toggleSelection(template.id) }
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = template.icon,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column {
+                                            Text(
+                                                text = template.title,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Tipo: ${template.category} • ${template.fields.size} campos",
+                                                style = TelemetryMonoStyle,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
 
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column {
-                                        Text(
-                                            text = template.title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "Tipo: ${template.category} • ${template.fields.size} campos" +
-                                                if (template.isPredefined) " • Predefinida" else "",
-                                            style = TelemetryMonoStyle,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                    if (!isSelectionMode && isAdmin) {
+                                        TextButton(
+                                            onClick = { templateToEdit = template }
+                                        ) {
+                                            Text("Editar", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = template.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
 
                                 if (!isSelectionMode) {
-                                    TextButton(
-                                        onClick = { templateToEdit = template }
-                                    ) {
-                                        Text("Editar", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = if (isAdmin) "Toca para llenar reporte • Mantén presionado para gestionar →" else "Toca para llenar reporte →",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = template.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            if (!isSelectionMode) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Toca para llenar reporte • Mantén presionado para seleccionar →",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
                 }
             } else {
                 // STEP 2: FILL DYNAMIC FORM FIELDS BASED ON SELECTED TEMPLATE
