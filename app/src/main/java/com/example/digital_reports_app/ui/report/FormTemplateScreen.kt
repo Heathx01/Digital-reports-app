@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -76,6 +77,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.digital_reports_app.ui.navigation.Screen
+import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
+import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.CustomFormField
@@ -99,6 +103,7 @@ data class ReportTemplateItem(
 fun FormTemplateScreen(
     onBack: () -> Unit,
     onOpenGuidedForms: () -> Unit = {},
+    onTabSelected: (String) -> Unit = {},
     viewModel: CreateReportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -235,7 +240,6 @@ fun FormTemplateScreen(
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            // Clean up temporary photo scans in cacheDir
             try {
                 File(context.cacheDir, "scans").deleteRecursively()
             } catch (_: Exception) {}
@@ -340,6 +344,14 @@ fun FormTemplateScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
+        },
+        bottomBar = {
+            if (selectedTemplate == null) {
+                WorkProBottomNavBar(
+                    currentRoute = Screen.CREATE_REPORT,
+                    onTabSelected = onTabSelected
+                )
+            }
         }
     ) { innerPadding ->
         Column(
@@ -347,6 +359,7 @@ fun FormTemplateScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
+                .horizontalTabSwipeGesture(Screen.CREATE_REPORT, onTabSelected)
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState())
                 .imePadding()

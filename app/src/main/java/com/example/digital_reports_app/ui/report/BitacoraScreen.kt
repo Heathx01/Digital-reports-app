@@ -66,6 +66,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
+import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
 import com.example.digital_reports_app.ui.theme.SkeletonReportCardItem
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
@@ -121,6 +122,7 @@ fun BitacoraScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
+                .horizontalTabSwipeGesture(Screen.BITACORA, onTabSelected)
         ) {
             // Metrics Header Bar
             Box(

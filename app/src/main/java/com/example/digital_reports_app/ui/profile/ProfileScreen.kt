@@ -70,6 +70,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.digital_reports_app.ui.navigation.Screen
+import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
+import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.AppLanguageHelper
@@ -80,6 +83,7 @@ import com.example.digital_reports_app.worker.SyncReportsWorker
 fun ProfileScreen(
     onBack: () -> Unit = {},
     onLogout: () -> Unit = {},
+    onTabSelected: (String) -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -144,12 +148,20 @@ fun ProfileScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
+        bottomBar = {
+            WorkProBottomNavBar(
+                currentRoute = Screen.PROFILE,
+                onTabSelected = onTabSelected
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+                .horizontalTabSwipeGesture(Screen.PROFILE, onTabSelected)
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
                 .imePadding()

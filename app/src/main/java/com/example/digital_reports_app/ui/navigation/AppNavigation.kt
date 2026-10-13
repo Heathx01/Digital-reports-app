@@ -122,6 +122,14 @@ fun AppNavigation(
                 },
                 onOpenGuidedForms = {
                     navController.navigate(Screen.GUIDED_FORM)
+                },
+                onTabSelected = { route ->
+                    when (route) {
+                        Screen.HOME -> navController.navigate(Screen.HOME)
+                        Screen.BITACORA -> navController.navigate(Screen.BITACORA)
+                        Screen.PROFILE -> navController.navigate(Screen.PROFILE)
+                        else -> {}
+                    }
                 }
             )
         }
@@ -168,6 +176,14 @@ fun AppNavigation(
                 onLogout = {
                     navController.navigate(Screen.LOGIN) {
                         popUpTo(Screen.HOME) { inclusive = true }
+                    }
+                },
+                onTabSelected = { route ->
+                    when (route) {
+                        Screen.HOME -> navController.navigate(Screen.HOME)
+                        Screen.CREATE_REPORT -> navController.navigate(Screen.CREATE_REPORT)
+                        Screen.BITACORA -> navController.navigate(Screen.BITACORA)
+                        else -> {}
                     }
                 }
             )
