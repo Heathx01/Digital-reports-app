@@ -30,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,6 +52,7 @@ import androidx.work.WorkManager
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
+import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
 import com.example.digital_reports_app.ui.report.ReportListViewModel
 import com.example.digital_reports_app.ui.theme.StatusSuccessGreen
 import com.example.digital_reports_app.ui.theme.StatusWarningAmber
@@ -84,18 +86,20 @@ fun HomeScreen(
     val completedCount = reportUiState.reports.count { it.status == "COMPLETADO" }
     val pendingCount = reportUiState.reports.count { it.status != "COMPLETADO" }
 
+    val handleTabNavigation = { route: String ->
+        when (route) {
+            Screen.CREATE_REPORT -> onCreateReportClick()
+            Screen.BITACORA, Screen.REPORTS_LIST -> onBitacoraClick()
+            Screen.PROFILE -> onProfileClick()
+            else -> {}
+        }
+    }
+
     Scaffold(
         bottomBar = {
             WorkProBottomNavBar(
                 currentRoute = Screen.HOME,
-                onTabSelected = { route ->
-                    when (route) {
-                        Screen.CREATE_REPORT -> onCreateReportClick()
-                        Screen.BITACORA, Screen.REPORTS_LIST -> onBitacoraClick()
-                        Screen.PROFILE -> onProfileClick()
-                        else -> {}
-                    }
-                }
+                onTabSelected = handleTabNavigation
             )
         }
     ) { innerPadding ->
@@ -104,6 +108,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
+                .horizontalTabSwipeGesture(Screen.HOME, handleTabNavigation)
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
@@ -159,11 +164,11 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Summary Card
+            // Summary Card (Resumen General Liquid Glass con Bordes Brillantes)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .liquidGlass(cornerRadius = 20.dp, borderWidth = 2.dp, prominent = true)
                     .background(MaterialTheme.colorScheme.primary)
                     .padding(20.dp)
             ) {
@@ -236,7 +241,7 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .liquidGlass(cornerRadius = 16.dp)
+                        .liquidGlass(cornerRadius = 16.dp, borderWidth = 1.5.dp)
                         .padding(20.dp)
                 ) {
                     Text(
@@ -264,11 +269,11 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Single unified Action Card for Chronological Flow
+            // Single unified Action Card with Glowing Border
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .liquidGlass(cornerRadius = 20.dp, prominent = true)
+                    .liquidGlass(cornerRadius = 20.dp, borderWidth = 2.dp, prominent = true)
                     .clickable { onCreateReportClick() }
                     .padding(20.dp)
             ) {
@@ -340,7 +345,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .liquidGlass(cornerRadius = 12.dp)
+                                .liquidGlass(cornerRadius = 12.dp, borderWidth = 1.5.dp)
                                 .padding(12.dp)
                         ) {
                             Column {
@@ -396,7 +401,7 @@ private fun RecentActivityItemCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlass(cornerRadius = 16.dp)
+            .liquidGlass(cornerRadius = 16.dp, borderWidth = 1.5.dp)
             .clickable { onClick() }
             .padding(14.dp)
     ) {

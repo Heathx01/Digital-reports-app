@@ -70,21 +70,19 @@ val DocuFieldDarkColorScheme = darkColorScheme(
 )
 
 // =============================================================================
-// Liquid Glass Modifier (Nativo para Jetpack Compose)
+// Liquid Glass Modifier con Bordes Brillantes / Especulares
 // =============================================================================
 
 /**
- * Aplica el efecto visual Liquid Glass / Vidrio Esmerilado Industrial a cualquier
- * componente Composable en Android:
+ * Aplica el efecto visual Liquid Glass con Bordes Brillantes Resplandecientes:
  * - Recorte suave según el radio especificado.
  * - Fondo translúcido con tonalidad calibrada según modo claro u oscuro.
- * - Bisel especular perimetral con gradiente vertical (reflejo superior y atenuación inferior).
- * - Desenfoque gaussiano de fondo opcional (requiere Android 12+ API 31 para RenderEffect).
+ * - Bisel especular perimetral brillante con gradiente vertical.
  */
 fun Modifier.liquidGlass(
     isDarkTheme: Boolean,
     cornerRadius: Dp = 16.dp,
-    borderWidth: Dp = 1.dp,
+    borderWidth: Dp = 1.5.dp,
     prominent: Boolean = false,
     backgroundBlurRadius: Dp = 0.dp
 ): Modifier {
@@ -95,13 +93,13 @@ fun Modifier.liquidGlass(
     val borderBrush = Brush.verticalGradient(
         colors = listOf(
             glassTokens.borderSpecularTop,
-            glassTokens.borderSubtleBottom
+            glassTokens.borderSubtleBottom,
+            glassTokens.borderSpecularTop
         )
     )
 
     var modifier = this.clip(shape)
 
-    // Desenfoque opcional si se ejecuta en Android 12+ (API 31)
     if (backgroundBlurRadius > 0.dp && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         modifier = modifier.blur(backgroundBlurRadius)
     }
@@ -118,7 +116,7 @@ fun Modifier.liquidGlass(
 @Composable
 fun Modifier.liquidGlass(
     cornerRadius: Dp = 16.dp,
-    borderWidth: Dp = 1.dp,
+    borderWidth: Dp = 1.5.dp,
     prominent: Boolean = false,
     backgroundBlurRadius: Dp = 0.dp
 ): Modifier {
@@ -130,6 +128,26 @@ fun Modifier.liquidGlass(
         prominent = prominent,
         backgroundBlurRadius = backgroundBlurRadius
     )
+}
+
+/**
+ * Modificador para aplicar bordes brillantes resplandecientes a Botones y Tarjetas
+ */
+@Composable
+fun Modifier.glowingBorder(
+    cornerRadius: Dp = 14.dp,
+    borderWidth: Dp = 1.5.dp
+): Modifier {
+    val glassTokens = LocalLiquidGlassColors.current
+    val shape = RoundedCornerShape(cornerRadius)
+    val borderBrush = Brush.horizontalGradient(
+        colors = listOf(
+            glassTokens.borderSpecularTop,
+            glassTokens.borderSubtleBottom,
+            glassTokens.borderSpecularTop
+        )
+    )
+    return this.border(width = borderWidth, brush = borderBrush, shape = shape)
 }
 
 // =============================================================================
