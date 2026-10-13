@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.digital_reports_app.R
 import com.example.digital_reports_app.ui.navigation.Screen
 import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
@@ -170,7 +171,7 @@ fun ProfileScreen(
 
             // Título
             Text(
-                text = "Ajustes y Perfil",
+                text = stringResource(R.string.title_settings),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -240,7 +241,7 @@ fun ProfileScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "Código de Usuario: $userCode",
+                                text = "${stringResource(R.string.label_user_code)}: $userCode",
                                 style = TelemetryMonoStyle,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -251,7 +252,7 @@ fun ProfileScreen(
                     IconButton(onClick = { viewModel.toggleEditProfileDialog(true) }) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Editar Perfil y Credenciales",
+                            contentDescription = stringResource(R.string.opt_edit_profile),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -260,7 +261,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Non-redundant Settings List Card with Liquid Glass
+            // Settings List Card with Liquid Glass
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -271,16 +272,16 @@ fun ProfileScreen(
                     // 1. Theme Selector: Seleccionar Tema
                     SettingItemValue(
                         icon = Icons.Outlined.Info,
-                        title = "Seleccionar Tema",
+                        title = stringResource(R.string.opt_select_theme),
                         value = themeModeLabel,
                         onClick = { viewModel.toggleThemeModeDialog(true) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // 2. Language Selector with Dynamic Locale Switching
+                    // 2. Language Selector
                     SettingItemValue(
                         icon = Icons.Outlined.Settings,
-                        title = "Idioma de la App",
+                        title = stringResource(R.string.opt_language),
                         value = uiState.selectedLanguage,
                         onClick = { viewModel.toggleLanguageDialog(true) }
                     )
@@ -289,8 +290,8 @@ fun ProfileScreen(
                     // 3. Upload Reports to Cloud
                     SettingItemClickable(
                         icon = Icons.Outlined.Check,
-                        title = "Sincronizar Reportes con la Nube",
-                        value = "Subir",
+                        title = stringResource(R.string.opt_sync_cloud),
+                        value = stringResource(R.string.text_subir),
                         onClick = {
                             val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
                             WorkManager.getInstance(context).enqueue(syncRequest)
@@ -302,8 +303,8 @@ fun ProfileScreen(
                     // 4. Refresh Report Status from Server
                     SettingItemClickable(
                         icon = Icons.Outlined.Refresh,
-                        title = "Actualizar Estado de Expedientes",
-                        value = "Obtener",
+                        title = stringResource(R.string.opt_refresh_status),
+                        value = stringResource(R.string.text_obtener),
                         onClick = {
                             Toast.makeText(context, "Obteniendo estado reciente de expedientes desde el servidor...", Toast.LENGTH_LONG).show()
                         }
@@ -326,7 +327,7 @@ fun ProfileScreen(
                 )
             ) {
                 Text(
-                    text = "Cerrar Sesión",
+                    text = stringResource(R.string.btn_logout),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -344,7 +345,7 @@ fun ProfileScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Editar Perfil y Credenciales", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.opt_edit_profile), fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -352,40 +353,7 @@ fun ProfileScreen(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Avatar & Photo Upload Section
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .liquidGlass(cornerRadius = 16.dp)
-                            .clickable { photoPickerLauncher.launch("image/*") }
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = editNameInput.take(1).uppercase().ifBlank { "U" },
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(14.dp))
-                            Column {
-                                Text("Foto de Perfil", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Text("Toca para actualizar imagen de perfil", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-
                     // Personal Info Fields
-                    Text("Información Personal", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-
                     OutlinedTextField(
                         value = editNameInput,
                         onValueChange = { editNameInput = it },
@@ -397,7 +365,7 @@ fun ProfileScreen(
                     OutlinedTextField(
                         value = editCodeInput,
                         onValueChange = { editCodeInput = it },
-                        label = { Text("Código de Usuario (min. 6 dígitos) *") },
+                        label = { Text("${stringResource(R.string.label_user_code)} *") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -405,19 +373,14 @@ fun ProfileScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
                     // Password Credentials Section
-                    Text("Cambiar Contraseña (Opcional)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.title_change_password), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
                     OutlinedTextField(
                         value = currentPasswordInput,
                         onValueChange = { currentPasswordInput = it },
-                        label = { Text("Contraseña Actual") },
+                        label = { Text(stringResource(R.string.label_current_password)) },
                         singleLine = true,
                         visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
-                                Text(if (isCurrentPasswordVisible) "Ocultar" else "Mostrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -425,14 +388,9 @@ fun ProfileScreen(
                     OutlinedTextField(
                         value = newPasswordInput,
                         onValueChange = { newPasswordInput = it },
-                        label = { Text("Nueva Contraseña (min. 8 caract.)") },
+                        label = { Text(stringResource(R.string.label_new_password)) },
                         singleLine = true,
                         visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
-                                Text(if (isNewPasswordVisible) "Ocultar" else "Mostrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -458,25 +416,24 @@ fun ProfileScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.btn_save_changes), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.toggleEditProfileDialog(false) }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.btn_cancel))
                 }
             }
         )
     }
 
-    // THEME MODE SELECTOR DIALOG (Oscuro, Claro, Sistema)
+    // THEME MODE SELECTOR DIALOG
     if (uiState.showThemeModeDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleThemeModeDialog(false) },
-            title = { Text("Seleccionar Tema", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.opt_select_theme), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Option 1: Oscuro
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -494,7 +451,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Option 2: Claro
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -512,7 +468,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Option 3: Sistema
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -539,11 +494,11 @@ fun ProfileScreen(
         )
     }
 
-    // LANGUAGE SELECTOR DIALOG WITH REAL LOCALE SWITCHING
+    // LANGUAGE SELECTOR DIALOG WITH DYNAMIC LOCALE SWITCHING
     if (uiState.showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleLanguageDialog(false) },
-            title = { Text("Seleccionar Idioma", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.opt_language), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
@@ -553,7 +508,6 @@ fun ProfileScreen(
                                 viewModel.setLanguage("Español")
                                 AppLanguageHelper.applyLanguageConfig(context, "Español")
                                 viewModel.toggleLanguageDialog(false)
-                                Toast.makeText(context, "Idioma cambiado a Español", Toast.LENGTH_SHORT).show()
                             }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -571,7 +525,6 @@ fun ProfileScreen(
                                 viewModel.setLanguage("English")
                                 AppLanguageHelper.applyLanguageConfig(context, "English")
                                 viewModel.toggleLanguageDialog(false)
-                                Toast.makeText(context, "Language changed to English", Toast.LENGTH_SHORT).show()
                             }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -586,7 +539,7 @@ fun ProfileScreen(
             },
             confirmButton = {
                 OutlinedButton(onClick = { viewModel.toggleLanguageDialog(false) }) {
-                    Text("Cerrar")
+                    Text(stringResource(R.string.btn_cancel))
                 }
             }
         )
@@ -596,19 +549,19 @@ fun ProfileScreen(
     if (uiState.showLogoutConfirmDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleLogoutConfirmDialog(false) },
-            title = { Text("Cerrar Sesión", fontWeight = FontWeight.Bold) },
-            text = { Text("¿Estás seguro de que deseas cerrar sesión? Tendrás que ingresar tus credenciales para volver a entrar.") },
+            title = { Text(stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas cerrar sesión?") },
             confirmButton = {
                 Button(
                     onClick = { viewModel.logout() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Cerrar Sesión", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.toggleLogoutConfirmDialog(false) }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.btn_cancel))
                 }
             }
         )
