@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.util
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import java.util.Locale
@@ -16,5 +17,9 @@ object AppLanguageHelper {
         config.setLocale(locale)
         @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
+
+        if (context is Activity) {
+            context.recreate()
+        }
     }
 }

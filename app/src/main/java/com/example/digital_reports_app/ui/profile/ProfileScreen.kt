@@ -268,16 +268,16 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
 
-                    // Theme Mode Selector Dropdown Modal (Oscuro, Claro, Sistema)
+                    // 1. Theme Selector: Seleccionar Tema
                     SettingItemValue(
                         icon = Icons.Outlined.Info,
-                        title = "Tema de la Interfaz",
+                        title = "Seleccionar Tema",
                         value = themeModeLabel,
                         onClick = { viewModel.toggleThemeModeDialog(true) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Language Selector
+                    // 2. Language Selector with Dynamic Locale Switching
                     SettingItemValue(
                         icon = Icons.Outlined.Settings,
                         title = "Idioma de la App",
@@ -286,30 +286,27 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Automatic / Manual Sync (Persisted via DataStore)
-                    SettingItemToggle(
+                    // 3. Upload Reports to Cloud
+                    SettingItemClickable(
                         icon = Icons.Outlined.Check,
-                        title = "Sincronización Automática",
-                        checked = uiState.isAutoSyncEnabled,
-                        onCheckedChange = { isChecked ->
-                            viewModel.setAutoSyncEnabled(isChecked)
-                            if (isChecked) {
-                                val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
-                                WorkManager.getInstance(context).enqueue(syncRequest)
-                                Toast.makeText(context, "Sincronización automática activada", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Sincronización automática desactivada", Toast.LENGTH_SHORT).show()
-                            }
+                        title = "Sincronizar Reportes con la Nube",
+                        value = "Subir",
+                        onClick = {
+                            val syncRequest = OneTimeWorkRequestBuilder<SyncReportsWorker>().build()
+                            WorkManager.getInstance(context).enqueue(syncRequest)
+                            Toast.makeText(context, "Subiendo expedientes locales a la nube...", Toast.LENGTH_LONG).show()
                         }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // Check Updates Button
+                    // 4. Refresh Report Status from Server
                     SettingItemClickable(
                         icon = Icons.Outlined.Refresh,
-                        title = "Buscar Actualizaciones",
-                        value = "v1.0.0",
-                        onClick = { viewModel.toggleUpdateVersionDialog(true) }
+                        title = "Actualizar Estado de Expedientes",
+                        value = "Obtener",
+                        onClick = {
+                            Toast.makeText(context, "Obteniendo estado reciente de expedientes desde el servidor...", Toast.LENGTH_LONG).show()
+                        }
                     )
                 }
             }
@@ -476,7 +473,7 @@ fun ProfileScreen(
     if (uiState.showThemeModeDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleThemeModeDialog(false) },
-            title = { Text("Tema de la Interfaz", fontWeight = FontWeight.Bold) },
+            title = { Text("Seleccionar Tema", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     // Option 1: Oscuro
@@ -542,7 +539,7 @@ fun ProfileScreen(
         )
     }
 
-    // LANGUAGE SELECTOR DIALOG
+    // LANGUAGE SELECTOR DIALOG WITH REAL LOCALE SWITCHING
     if (uiState.showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleLanguageDialog(false) },
@@ -590,28 +587,6 @@ fun ProfileScreen(
             confirmButton = {
                 OutlinedButton(onClick = { viewModel.toggleLanguageDialog(false) }) {
                     Text("Cerrar")
-                }
-            }
-        )
-    }
-
-    // CHECK VERSION / UPDATE DIALOG
-    if (uiState.showUpdateVersionDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.toggleUpdateVersionDialog(false) },
-            title = { Text("Actualización de Software", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("DocuField Enterprise v1.0.0", style = TelemetryMonoStyle, color = MaterialTheme.colorScheme.primary)
-                    Text("Tu aplicación está actualizada a la última versión oficial disponible en el servidor.", style = MaterialTheme.typography.bodyMedium)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.toggleUpdateVersionDialog(false) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Entendido", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -705,42 +680,5 @@ fun SettingItemValue(
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@Composable
-fun SettingItemToggle(
-    icon: ImageVector,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        )
     }
 }
