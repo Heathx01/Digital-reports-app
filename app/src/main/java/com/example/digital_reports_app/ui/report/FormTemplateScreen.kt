@@ -5,13 +5,13 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -111,6 +112,7 @@ fun FormTemplateScreen(
 
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
     var templateToEdit by remember { mutableStateOf<ReportTemplateItem?>(null) }
+    var showCreateOptionsDialog by remember { mutableStateOf(false) }
     var showCreateTemplateDialog by remember { mutableStateOf(false) }
     var showScanDocumentDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -283,7 +285,7 @@ fun FormTemplateScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (isAdmin) "Selecciona, escanea, carga PDF o gestiona plantillas" else "Selecciona una plantilla para crear tu reporte",
+                                text = if (isAdmin) "Selecciona, crea o gestiona las plantillas de la empresa" else "Selecciona una plantilla para crear tu reporte",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -372,76 +374,36 @@ fun FormTemplateScreen(
         ) {
             // STEP 1: CATALOG OF TEMPLATES
             if (selectedTemplate == null) {
-                Button(
-                    onClick = onOpenGuidedForms,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Llenar formato paso a paso y generar PDF", fontWeight = FontWeight.Bold)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Plantillas de la Empresa",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-
-                    if (isAdmin) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // Scan Document Button
-                            OutlinedButton(
-                                onClick = { triggerCameraOrScan() },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Escanear", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            // Upload PDF Button
-                            OutlinedButton(
-                                onClick = {
-                                    try {
-                                        pdfPickerLauncher.launch(arrayOf("application/pdf"))
-                                    } catch (_: Exception) {
-                                        pdfPickerLauncher.launch(arrayOf("*/*"))
-                                    }
-                                },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Cargar PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            // Create New Template Button
-                            Button(
-                                onClick = {
-                                    newTemplateTitle = ""
-                                    newTemplateCategory = "Inspección"
-                                    newTemplateDescription = ""
-                                    newTemplateFields.clear()
-                                    newTemplateFields.addAll(DocumentTextAnalyzer.createDefaultFields())
-                                    showCreateTemplateDialog = true
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Add,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text("Nueva", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        }
+                // Unified Single Main Button: Crear Plantilla
+                if (isAdmin) {
+                    Button(
+                        onClick = { showCreateOptionsDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .padding(bottom = 12.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Crear Plantilla", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Plantillas de la Empresa",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -455,7 +417,7 @@ fun FormTemplateScreen(
                     ) {
                         Text(
                             text = if (isAdmin)
-                                "No hay plantillas registradas aún. Presiona 'Escanear', 'Cargar PDF' o 'Nueva' para registrar las plantillas oficiales de la empresa."
+                                "No hay plantillas registradas aún. Presiona el botón 'Crear Plantilla' para escanear o cargar los formatos de tu empresa."
                             else
                                 "No hay plantillas registradas por el administrador aún.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -728,6 +690,89 @@ fun FormTemplateScreen(
         }
     }
 
+    // UNIFIED CREATE TEMPLATE OPTIONS DIALOG (Cargar PDF vs Escanear)
+    if (showCreateOptionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateOptionsDialog = false },
+            title = { Text("Crear Nueva Plantilla", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Selecciona el método de creación de la plantilla para tu empresa:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Option 1: Cargar PDF
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlass(cornerRadius = 14.dp, prominent = true)
+                            .clickable {
+                                showCreateOptionsDialog = false
+                                try {
+                                    pdfPickerLauncher.launch(arrayOf("application/pdf"))
+                                } catch (_: Exception) {
+                                    pdfPickerLauncher.launch(arrayOf("*/*"))
+                                }
+                            }
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("📄", fontSize = 20.sp)
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text("Cargar Documento PDF", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("Sube un archivo PDF membretado de la empresa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    // Option 2: Escanear
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlass(cornerRadius = 14.dp, prominent = true)
+                            .clickable {
+                                showCreateOptionsDialog = false
+                                triggerCameraOrScan()
+                            }
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("📷", fontSize = 20.sp)
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text("Escanear Hoja Física", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("Captura una fotografía del formato impreso", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(onClick = { showCreateOptionsDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     // ANALYZING DOCUMENT LOADING DIALOG
     if (uiState.isAnalyzingDocument) {
         AlertDialog(
@@ -830,7 +875,7 @@ fun FormTemplateScreen(
                                 fields = newTemplateFields
                             )
                             showScanDocumentDialog = false
-                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada en la base de datos", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada como predeterminada", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
