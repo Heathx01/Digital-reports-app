@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -603,6 +602,19 @@ fun FormTemplateScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Optional Guided Form Wizard Launcher Button
+                Button(
+                    onClick = onOpenGuidedForms,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("📋 Llenar en Modo Guiado Paso a Paso", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Dynamic Form Container
                 Box(
                     modifier = Modifier
@@ -690,7 +702,7 @@ fun FormTemplateScreen(
         }
     }
 
-    // UNIFIED CREATE TEMPLATE OPTIONS DIALOG (Cargar PDF vs Escanear)
+    // UNIFIED CREATE TEMPLATE OPTIONS DIALOG (Formato Guiado, Cargar PDF vs Escanear)
     if (showCreateOptionsDialog) {
         AlertDialog(
             onDismissRequest = { showCreateOptionsDialog = false },
@@ -703,7 +715,35 @@ fun FormTemplateScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // Option 1: Cargar PDF
+                    // Option 1: Formato Guiado Paso a Paso
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .liquidGlass(cornerRadius = 14.dp, prominent = true)
+                            .clickable {
+                                showCreateOptionsDialog = false
+                                onOpenGuidedForms()
+                            }
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("📋", fontSize = 20.sp)
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text("Formato Guiado por Pasos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("Ingreso asistido con barra de progreso y firmas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    // Option 2: Cargar PDF
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -735,7 +775,7 @@ fun FormTemplateScreen(
                         }
                     }
 
-                    // Option 2: Escanear
+                    // Option 3: Escanear
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -758,7 +798,7 @@ fun FormTemplateScreen(
                             Spacer(modifier = Modifier.width(14.dp))
                             Column {
                                 Text("Escanear Hoja Física", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Text("Captura una fotografía del formato impreso", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Captura una fotografía del formato impreso con OCR", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -875,7 +915,7 @@ fun FormTemplateScreen(
                                 fields = newTemplateFields
                             )
                             showScanDocumentDialog = false
-                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada como predeterminada", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Plantilla '$newTemplateTitle' guardada en la base de datos", Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
