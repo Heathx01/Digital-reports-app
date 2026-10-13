@@ -208,26 +208,6 @@ fun ReportDetailScreen(
                         ) {
                             Text("📄 Previsualizar / Exportar PDF ISO", fontWeight = FontWeight.Bold)
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.updateStatus("EN_PROCESO") },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("En Proceso")
-                            }
-                            Button(
-                                onClick = { viewModel.updateStatus("COMPLETADO") },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Completar")
-                            }
-                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
