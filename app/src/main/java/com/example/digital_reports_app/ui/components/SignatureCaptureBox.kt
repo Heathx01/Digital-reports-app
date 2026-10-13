@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -70,9 +71,9 @@ fun SignatureCaptureBox(
                 hasDrawn = false
             },
             enabled = hasDrawn,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("Limpiar Trazo", color = MaterialTheme.colorScheme.onSurface)
+            Text("Limpiar Trazo", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
