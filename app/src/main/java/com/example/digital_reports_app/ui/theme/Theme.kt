@@ -70,19 +70,20 @@ val DocuFieldDarkColorScheme = darkColorScheme(
 )
 
 // =============================================================================
-// Liquid Glass Modifier con Bordes Brillantes / Especulares
+// Liquid Glass Modifier (Nativo para Jetpack Compose)
 // =============================================================================
 
 /**
- * Aplica el efecto visual Liquid Glass con Bordes Brillantes Resplandecientes:
+ * Aplica el efecto visual Liquid Glass / Vidrio Esmerilado Industrial a cualquier
+ * componente Composable en Android:
  * - Recorte suave según el radio especificado.
  * - Fondo translúcido con tonalidad calibrada según modo claro u oscuro.
- * - Bisel especular perimetral brillante con gradiente vertical.
+ * - Bisel especular perimetral suave con gradiente vertical.
  */
 fun Modifier.liquidGlass(
     isDarkTheme: Boolean,
     cornerRadius: Dp = 16.dp,
-    borderWidth: Dp = 1.5.dp,
+    borderWidth: Dp = 1.dp,
     prominent: Boolean = false,
     backgroundBlurRadius: Dp = 0.dp
 ): Modifier {
@@ -93,8 +94,7 @@ fun Modifier.liquidGlass(
     val borderBrush = Brush.verticalGradient(
         colors = listOf(
             glassTokens.borderSpecularTop,
-            glassTokens.borderSubtleBottom,
-            glassTokens.borderSpecularTop
+            glassTokens.borderSubtleBottom
         )
     )
 
@@ -116,7 +116,7 @@ fun Modifier.liquidGlass(
 @Composable
 fun Modifier.liquidGlass(
     cornerRadius: Dp = 16.dp,
-    borderWidth: Dp = 1.5.dp,
+    borderWidth: Dp = 1.dp,
     prominent: Boolean = false,
     backgroundBlurRadius: Dp = 0.dp
 ): Modifier {
@@ -128,26 +128,6 @@ fun Modifier.liquidGlass(
         prominent = prominent,
         backgroundBlurRadius = backgroundBlurRadius
     )
-}
-
-/**
- * Modificador para aplicar bordes brillantes resplandecientes a Botones y Tarjetas
- */
-@Composable
-fun Modifier.glowingBorder(
-    cornerRadius: Dp = 14.dp,
-    borderWidth: Dp = 1.5.dp
-): Modifier {
-    val glassTokens = LocalLiquidGlassColors.current
-    val shape = RoundedCornerShape(cornerRadius)
-    val borderBrush = Brush.horizontalGradient(
-        colors = listOf(
-            glassTokens.borderSpecularTop,
-            glassTokens.borderSubtleBottom,
-            glassTokens.borderSpecularTop
-        )
-    )
-    return this.border(width = borderWidth, brush = borderBrush, shape = shape)
 }
 
 // =============================================================================

@@ -49,7 +49,7 @@ val StatusSuccessGreen = SuccessLight
 val StatusWarningAmber = WarningLight
 
 // =============================================================================
-// Tokens Específicos para el Efecto Liquid Glass Industrial (Bordes Brillantes)
+// Tokens Específicos para el Efecto Liquid Glass Industrial
 // =============================================================================
 
 @Immutable
@@ -67,11 +67,11 @@ data class LiquidGlassColors(
 )
 
 val LightLiquidGlassColors = LiquidGlassColors(
-    surfaceColor = Color(0xEBFFFFFF),          // 92% Blanco nítido
-    surfaceProminentColor = Color(0xF5FFFFFF), // 96% Blanco brillante
-    borderSpecularTop = Color(0xFFEA580C),     // Naranja Industrial Resplandeciente
-    borderSubtleBottom = Color(0xFFCBD5E1),    // Contorno grisáceo
-    innerGlow = Color(0xFFFED7AA),             // Resplandor interior
+    surfaceColor = Color(0xD1FFFFFF),          // 82% Blanco translúcido
+    surfaceProminentColor = Color(0xEBFFFFFF), // 92% Blanco translúcido
+    borderSpecularTop = Color(0xE6FFFFFF),     // 90% Bisel reflectante superior limpio
+    borderSubtleBottom = Color(0x40CBD5E1),    // 25% Contorno inferior
+    innerGlow = Color(0xF2FFFFFF),             // Resplandor superior
     accentTint = Color(0xFFEA580C),            // Naranja industrial
     telemetryAccent = Color(0xFF0F172A),       // Pizarra oscuro
     statusSuccess = SuccessLight,
@@ -80,11 +80,11 @@ val LightLiquidGlassColors = LiquidGlassColors(
 )
 
 val DarkLiquidGlassColors = LiquidGlassColors(
-    surfaceColor = Color(0xD60F172A),          // 84% Carbón titanio
-    surfaceProminentColor = Color(0xE61E293B), // 90% Titanio destacado
-    borderSpecularTop = Color(0xFF60A5FA),     // Azul Eléctrico brillante
-    borderSubtleBottom = Color(0xFF1E3A8A),    // Azul Profundo
-    innerGlow = Color(0x663B82F6),             // Aura perimetral azul
+    surfaceColor = Color(0xC20F172A),          // 76% Carbón pizarra translúcido
+    surfaceProminentColor = Color(0xD61E293B), // 84% Titanio translúcido
+    borderSpecularTop = Color(0x663B82F6),     // 40% Bisel azul eléctrico
+    borderSubtleBottom = Color(0x261E293B),    // 15% Bisel inferior ahumado
+    innerGlow = Color(0x263B82F6),             // Aura perimetral azul tenue
     accentTint = Color(0xFF3B82F6),            // Azul cobalto
     telemetryAccent = Color(0xFF06B6D4),       // Cian fosforescente
     statusSuccess = SuccessDark,
