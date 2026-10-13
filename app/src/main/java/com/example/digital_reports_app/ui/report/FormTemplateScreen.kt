@@ -3,13 +3,9 @@ package com.example.digital_reports_app.ui.report
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
-import androidx.core.content.FileProvider
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -36,12 +32,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -80,6 +74,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
@@ -87,6 +82,7 @@ import com.example.digital_reports_app.util.CustomFormField
 import com.example.digital_reports_app.util.DocumentTextAnalyzer
 import com.example.digital_reports_app.util.FormFieldType
 import com.example.digital_reports_app.util.NotificationHelper
+import java.io.File
 
 data class ReportTemplateItem(
     val id: String,
@@ -106,7 +102,6 @@ fun FormTemplateScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Observe templates directly from Room DB
     val templates = uiState.savedTemplates
 
     var selectedTemplate by remember { mutableStateOf<ReportTemplateItem?>(null) }
@@ -127,6 +122,10 @@ fun FormTemplateScreen(
 
     // Dynamic Form Active Values (Step 2)
     val activeFormFields = remember { mutableStateListOf<CustomFormField>() }
+
+    // Full-resolution Camera Capture Uri
+    var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var currentPhotoFile by remember { mutableStateOf<File?>(null) }
 
     // Selection Helper functions
     val toggleSelection = { templateId: String ->
@@ -151,107 +150,61 @@ fun FormTemplateScreen(
         selectedTemplateIds.clear()
     }
 
-    val scope = rememberCoroutineScope()
-    var isAnalyzing by remember { mutableStateOf(false) }
-    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
-
-    // PDF File Upload Launcher: analiza el PDF fuera del hilo principal
+    // 1. PDF File Upload Launcher
     val pdfPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            val nextIndex = templates.size + 1
-            scope.launch {
-                isAnalyzing = true
-                try {
-                    val pdfResult = DocumentTextAnalyzer.analyzePdfUri(context, uri, nextIndex)
-
-                    newTemplateTitle = pdfResult.templateTitle
-                    newTemplateCategory = pdfResult.category
-                    newTemplateDescription = pdfResult.description
-                    newTemplateFields.clear()
-                    newTemplateFields.addAll(pdfResult.extractedFields)
-
-                    showScanDocumentDialog = true
-                    Toast.makeText(
-                        context,
-                        "¡PDF analizado! Se extrajeron ${pdfResult.extractedFields.size} campos.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } catch (e: Exception) {
-                    Log.e("FormTemplateScreen", "Error analizando PDF", e)
-                    Toast.makeText(context, "No se pudo analizar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
-                } finally {
-                    isAnalyzing = false
-                }
+            viewModel.analyzeAndProcessPdfUri(context, uri) { title, cat, desc, fields ->
+                newTemplateTitle = title
+                newTemplateCategory = cat
+                newTemplateDescription = desc
+                newTemplateFields.clear()
+                newTemplateFields.addAll(fields)
+                showScanDocumentDialog = true
+                Toast.makeText(context, "¡PDF analizado! Se extrajeron ${fields.size} campos.", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            Toast.makeText(context, "Carga de PDF cancelada", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Cámara en resolución completa (TakePicture + FileProvider) y OCR asíncrono
-    val cameraLauncher = rememberLauncherForActivityResult(
+    // 2. Full-resolution TakePicture Launcher (FileProvider in cacheDir/scans)
+    val fullResPhotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
-    ) { success: Boolean ->
-        val photoUri = pendingPhotoUri
-        if (success && photoUri != null) {
-            val nextIndex = templates.size + 1
-            scope.launch {
-                isAnalyzing = true
-                try {
-                    val bitmap = DocumentTextAnalyzer.decodeBitmapFromUri(context, photoUri)
-                    if (bitmap == null) {
-                        Toast.makeText(context, "No se pudo leer la foto capturada", Toast.LENGTH_LONG).show()
-                    } else {
-                        val result = DocumentTextAnalyzer.analyzeScannedBitmap(bitmap, nextIndex)
-
-                        newTemplateTitle = result.templateTitle
-                        newTemplateCategory = result.category
-                        newTemplateDescription = result.description
-                        newTemplateFields.clear()
-                        newTemplateFields.addAll(result.extractedFields)
-
-                        showScanDocumentDialog = true
-                        Toast.makeText(
-                            context,
-                            "¡Foto analizada! Se extrajeron ${result.extractedFields.size} campos del formato.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                } catch (e: Exception) {
-                    Log.e("FormTemplateScreen", "Error analizando foto", e)
-                    Toast.makeText(context, "No se pudo analizar la foto: ${e.message}", Toast.LENGTH_LONG).show()
-                } finally {
-                    isAnalyzing = false
+    ) { isSuccess: Boolean ->
+        if (isSuccess && currentPhotoFile != null && currentPhotoFile!!.exists()) {
+            val bitmap: Bitmap? = BitmapFactory.decodeFile(currentPhotoFile!!.absolutePath)
+            if (bitmap != null) {
+                viewModel.analyzeAndProcessScannedPhoto(bitmap) { title, cat, desc, fields ->
+                    newTemplateTitle = title
+                    newTemplateCategory = cat
+                    newTemplateDescription = desc
+                    newTemplateFields.clear()
+                    newTemplateFields.addAll(fields)
+                    showScanDocumentDialog = true
+                    Toast.makeText(context, "¡Foto analizada! Se extrajeron ${fields.size} campos.", Toast.LENGTH_SHORT).show()
                 }
             }
-        } else {
-            Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
         }
     }
 
-    val launchCamera = {
-        try {
-            val dir = File(context.cacheDir, "scans").apply { mkdirs() }
-            val file = File(dir, "scan_${System.currentTimeMillis()}.jpg")
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            pendingPhotoUri = uri
-            cameraLauncher.launch(uri)
-        } catch (e: Exception) {
-            Log.e("FormTemplateScreen", "No se pudo abrir la cámara", e)
-            Toast.makeText(context, "No se pudo iniciar la cámara: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    // Camera Runtime Permission Launcher
+    // 3. Camera Runtime Permission Launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            launchCamera()
+            try {
+                val scansDir = File(context.cacheDir, "scans")
+                scansDir.mkdirs()
+                val photoFile = File(scansDir, "scan_photo_${System.currentTimeMillis()}.jpg")
+                val photoUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                currentPhotoFile = photoFile
+                currentPhotoUri = photoUri
+                fullResPhotoLauncher.launch(photoUri)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         } else {
-            Toast.makeText(context, "Se requiere permiso de cámara para escanear el formato impreso.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Se requiere permiso de cámara para escanear formatos.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -262,29 +215,29 @@ fun FormTemplateScreen(
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            launchCamera()
+            try {
+                val scansDir = File(context.cacheDir, "scans")
+                scansDir.mkdirs()
+                val photoFile = File(scansDir, "scan_photo_${System.currentTimeMillis()}.jpg")
+                val photoUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                currentPhotoFile = photoFile
+                currentPhotoUri = photoUri
+                fullResPhotoLauncher.launch(photoUri)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    if (isAnalyzing) {
-        AlertDialog(
-            onDismissRequest = {},
-            confirmButton = {},
-            title = { Text("Analizando documento...") },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("Extrayendo texto y campos del formato")
-                }
-            }
-        )
-    }
-
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
+            // Clean up temporary photo scans in cacheDir
+            try {
+                File(context.cacheDir, "scans").deleteRecursively()
+            } catch (_: Exception) {}
+
             NotificationHelper.showNotification(
                 context,
                 "Reporte Creado y Guardado",
@@ -357,7 +310,6 @@ fun FormTemplateScreen(
                 },
                 actions = {
                     if (isSelectionMode && selectedTemplate == null) {
-                        // Edit if exactly 1 item selected
                         if (selectedTemplateIds.size == 1) {
                             IconButton(
                                 onClick = {
@@ -375,7 +327,6 @@ fun FormTemplateScreen(
                             }
                         }
 
-                        // Delete selected items
                         IconButton(onClick = { showDeleteConfirmDialog = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.Delete,
@@ -694,7 +645,6 @@ fun FormTemplateScreen(
                             if (uiState.title.isBlank()) {
                                 viewModel.onTitleChanged(currentTpl.title)
                             }
-                            // Formats all filled dynamic fields into description
                             val formattedDescription = activeFormFields.joinToString("\n") {
                                 "${it.label}: ${it.value.ifBlank { "N/A" }}"
                             }
@@ -717,6 +667,25 @@ fun FormTemplateScreen(
                 }
             }
         }
+    }
+
+    // ANALYZING DOCUMENT LOADING DIALOG
+    if (uiState.isAnalyzingDocument) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Analizando Documento...", fontWeight = FontWeight.Bold) },
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Text("Ejecutando reconocimiento óptico OCR y extrayendo campos fidedignos...")
+                }
+            },
+            confirmButton = {}
+        )
     }
 
     // SCAN PHYSICAL DOCUMENT / UPLOAD PDF CONFIG DIALOG

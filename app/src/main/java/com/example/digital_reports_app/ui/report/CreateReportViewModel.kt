@@ -1,5 +1,8 @@
 package com.example.digital_reports_app.ui.report
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.digital_reports_app.data.local.SessionManager
@@ -18,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 
 data class CreateReportUiState(
@@ -25,6 +30,7 @@ data class CreateReportUiState(
     val category: String = "Inspección",
     val description: String = "",
     val isLoading: Boolean = false,
+    val isAnalyzingDocument: Boolean = false,
     val savedTemplates: List<ReportTemplateItem> = emptyList(),
     val errorMessage: String? = null,
     val isSuccess: Boolean = false
@@ -118,6 +124,35 @@ class CreateReportViewModel @Inject constructor(
 
         initialList.forEach { tpl ->
             saveTemplateToDb(tpl.title, tpl.category, tpl.description, tpl.fields, tpl.id)
+        }
+    }
+
+    fun analyzeAndProcessScannedPhoto(
+        bitmap: Bitmap,
+        onAnalyzed: (title: String, category: String, description: String, fields: List<CustomFormField>) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAnalyzingDocument = true) }
+            val nextIndex = _uiState.value.savedTemplates.size + 1
+            val result = DocumentTextAnalyzer.analyzeScannedBitmapWithMlKit(bitmap, nextIndex)
+
+            _uiState.update { it.copy(isAnalyzingDocument = false) }
+            onAnalyzed(result.templateTitle, result.category, result.description, result.extractedFields)
+        }
+    }
+
+    fun analyzeAndProcessPdfUri(
+        context: Context,
+        pdfUri: Uri,
+        onAnalyzed: (title: String, category: String, description: String, fields: List<CustomFormField>) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAnalyzingDocument = true) }
+            val nextIndex = _uiState.value.savedTemplates.size + 1
+            val result = DocumentTextAnalyzer.analyzePdfUri(context, pdfUri, nextIndex)
+
+            _uiState.update { it.copy(isAnalyzingDocument = false) }
+            onAnalyzed(result.templateTitle, result.category, result.description, result.extractedFields)
         }
     }
 
@@ -216,25 +251,62 @@ class CreateReportViewModel @Inject constructor(
     }
 
     private fun fieldsToJson(fields: List<CustomFormField>): String {
-        return fields.joinToString("|||") { f ->
-            "${f.id}:::${f.label}:::${f.type.name}:::${f.value}:::${f.options.joinToString(",")}"
+        val jsonArray = JSONArray()
+        fields.forEach { f ->
+            val obj = JSONObject()
+            obj.put("id", f.id)
+            obj.put("label", f.label)
+            obj.put("type", f.type.name)
+            obj.put("value", f.value)
+            val optionsArray = JSONArray()
+            f.options.forEach { optionsArray.put(it) }
+            obj.put("options", optionsArray)
+            obj.put("positionX", f.positionX.toDouble())
+            obj.put("positionY", f.positionY.toDouble())
+            jsonArray.put(obj)
         }
+        return jsonArray.toString()
     }
 
     private fun jsonToFields(json: String): List<CustomFormField> {
         if (json.isBlank()) return DocumentTextAnalyzer.createDefaultFields()
         return try {
-            json.split("|||").mapNotNull { line ->
-                val parts = line.split(":::")
-                if (parts.size >= 4) {
-                    val typeName = parts[2]
-                    val type = try { FormFieldType.valueOf(typeName) } catch (_: Exception) { FormFieldType.TEXT }
-                    val options = if (parts.size >= 5 && parts[4].isNotBlank()) parts[4].split(",") else emptyList()
-                    CustomFormField(parts[0], parts[1], type, parts[3], options)
-                } else null
-            }.ifEmpty { DocumentTextAnalyzer.createDefaultFields() }
+            val list = mutableListOf<CustomFormField>()
+            val jsonArray = JSONArray(json)
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val id = obj.optString("id", "f_$i")
+                val label = obj.optString("label", "Campo")
+                val typeName = obj.optString("type", "TEXT")
+                val type = try { FormFieldType.valueOf(typeName) } catch (_: Exception) { FormFieldType.TEXT }
+                val value = obj.optString("value", "")
+                val optionsList = mutableListOf<String>()
+                val optionsArr = obj.optJSONArray("options")
+                if (optionsArr != null) {
+                    for (j in 0 until optionsArr.length()) {
+                        optionsList.add(optionsArr.getString(j))
+                    }
+                }
+                val posX = obj.optDouble("positionX", 180.0).toFloat()
+                val posY = obj.optDouble("positionY", 600.0).toFloat()
+
+                list.add(CustomFormField(id, label, type, value, optionsList, posX, posY))
+            }
+            list.ifEmpty { DocumentTextAnalyzer.createDefaultFields() }
         } catch (_: Exception) {
-            DocumentTextAnalyzer.createDefaultFields()
+            try {
+                json.split("|||").mapNotNull { line ->
+                    val parts = line.split(":::")
+                    if (parts.size >= 4) {
+                        val typeName = parts[2]
+                        val type = try { FormFieldType.valueOf(typeName) } catch (_: Exception) { FormFieldType.TEXT }
+                        val options = if (parts.size >= 5 && parts[4].isNotBlank()) parts[4].split(",") else emptyList()
+                        CustomFormField(parts[0], parts[1], type, parts[3], options)
+                    } else null
+                }.ifEmpty { DocumentTextAnalyzer.createDefaultFields() }
+            } catch (_: Exception) {
+                DocumentTextAnalyzer.createDefaultFields()
+            }
         }
     }
 }

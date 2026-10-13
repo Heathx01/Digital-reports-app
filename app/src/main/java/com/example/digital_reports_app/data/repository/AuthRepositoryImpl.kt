@@ -3,6 +3,7 @@ package com.example.digital_reports_app.data.repository
 import com.example.digital_reports_app.data.local.SessionManager
 import com.example.digital_reports_app.data.local.dao.UserDao
 import com.example.digital_reports_app.data.local.entity.UserEntity
+import com.example.digital_reports_app.util.SecurityUtils
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,7 +19,7 @@ class AuthRepositoryImpl @Inject constructor(
             val user = userDao.getUserByCode(userCode.trim())
             if (user == null) {
                 Result.failure(Exception("Código de usuario no encontrado."))
-            } else if (user.passwordHash != password) {
+            } else if (!SecurityUtils.verifyPassword(password, user.passwordHash)) {
                 Result.failure(Exception("Contraseña incorrecta."))
             } else {
                 sessionManager.saveSession(user.userId, user.name, user.userCode)
