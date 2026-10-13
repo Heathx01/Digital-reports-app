@@ -206,7 +206,91 @@ object FormCatalog {
         )
     )
 
-    val all: List<StructuredForm> = listOf(recepcionEntregaLotes)
+    val engancheDesengancheCarretas = StructuredForm(
+        id = "2-CM-F004",
+        name = "Permiso de Enganche y Desenganche de Carretas",
+        category = "Cosecha Mecanizada",
+        organization = "Pantaleon",
+        documentTitle = "REGISTRO DE PERMISO PARA REALIZAR ENGANCHE Y DESENGANCHE DE CARRETAS, VOLTEOS, PLATAFORMA, NODRIZA Y CABLE PARA REMOLQUE",
+        revision = "Actualización 4: 11/09/2025",
+        code = "2-CM-F004",
+        footer = "Lugar: Proceso de Corte de Caña   Medio: Papel   Responsable: Supervisor de Turno   Retención: 6 meses   Disposición: Destruir",
+        pages = listOf(
+            FormPage(
+                id = "eng",
+                title = "PERMISO DE ENGANCHE Y DESENGANCHE DE CARRETAS Y EQUIPOS DE ARRASTRE",
+                headerFields = listOf(
+                    HeaderField("fecha", "FECHA DE EJECUCIÓN", isDate = true),
+                    HeaderField("frente", "FRENTE DE TRABAJO"),
+                    HeaderField("finca_lote", "FINCA - LOTE"),
+                    HeaderField("sup_turno", "SUPERVISOR DE TURNO"),
+                    HeaderField("turno", "TURNO"),
+                    HeaderField("hora_inicio", "HORA INICIO"),
+                    HeaderField("hora_fin", "HORA FIN")
+                ),
+                sections = listOf(
+                    FormSection(
+                        "eng_equipo", "Equipo de Arrastre Seleccionado", RowKind.YES_NO,
+                        items(
+                            "eng_equipo",
+                            "Carretas",
+                            "Plataforma",
+                            "Volteo",
+                            "Nodriza",
+                            "Cable Remolque"
+                        )
+                    ),
+                    FormSection(
+                        "eng_epp", "Verificación de Equipo de Protección Personal (EPP)", RowKind.YES_NO,
+                        items(
+                            "eng_epp",
+                            "Casco con barbiquejo en buen estado?",
+                            "Botas con punta metálica?",
+                            "Uniforme reglamentario para el puesto?",
+                            "Lentes de seguridad transparentes/oscuros?",
+                            "Guantes de cuero largo?"
+                        )
+                    ),
+                    FormSection(
+                        "eng_peligros", "Lista de Chequeo de Peligros Controlados", RowKind.YES_NO,
+                        items(
+                            "eng_peligros",
+                            "¿En el ambiente hay presencia de lluvia, tormenta eléctrica o vientos fuertes?",
+                            "¿Presencia de humedad o inestabilidad en el suelo?",
+                            "¿El colaborador que realiza la labor cuenta con las competencias requeridas?",
+                            "¿El ayudante IM VERIFICA que los dos seguros del tornamesa estén cerrados?",
+                            "¿En el área de trabajo cuenta con los ayudantes establecidos (2 requeridos)?",
+                            "¿El personal dispone de radio de comunicación para maniobras?",
+                            "¿Se utiliza una misma frecuencia y existe comunicación doble vía?",
+                            "¿Los equipos (tractor y cabezal) tienen alarma sonora de retroceso funcional?",
+                            "¿El Ayudante IM con radio NO es el mismo que manipula herramientas?",
+                            "¿Se cuenta con iluminación adecuada y suficiente para la labor?",
+                            "¿El lugar de enganche y desenganche está señalizado y delimitado?",
+                            "¿Están debidamente señalizados los puntos de enganche (color rojo)?",
+                            "¿Mecánicamente están funcionales los puntos de enganche?",
+                            "¿Los trabajadores tienen definida un área de seguridad donde ubicarse?",
+                            "¿El terreno donde se realizará el enganche tiene pendiente o inclinación?",
+                            "¿Hay personas ajenas a la actividad en el área de enganche?",
+                            "¿En el punto de trabajo se encuentra el tubo saca cuchillas?",
+                            "¿Fueron ubicadas las cuñas de seguridad antes de desenganchar las carretas?",
+                            "¿Se colocó tubo de enganche en dolly de carreta primaria antes del enganche?",
+                            "¿En el punto de trabajo se encuentra la cadena de alineación en buen estado?",
+                            "¿El personal cuenta con el tubo de enganche y desenganche en buen estado?",
+                            "¿El tractor de movimiento interno cuenta con compresor de aire y enganche autónomo?"
+                        )
+                    )
+                ),
+                commentsLabel = "NOTA: EL INCUMPLIMIENTO DE CUALQUIERA DE LAS MEDIDAS ES UNA FALTA GRAVE. Observaciones:",
+                signatureLabels = listOf(
+                    "FIRMA PERSONAL QUE REALIZA EL TRABAJO",
+                    "FIRMA AUTORIZACIÓN APERTURA DE LABOR",
+                    "FIRMA AUTORIZACIÓN CIERRE DE LABOR"
+                )
+            )
+        )
+    )
+
+    val all: List<StructuredForm> = listOf(recepcionEntregaLotes, engancheDesengancheCarretas)
 
     fun byId(id: String): StructuredForm? = all.firstOrNull { it.id == id }
 }
