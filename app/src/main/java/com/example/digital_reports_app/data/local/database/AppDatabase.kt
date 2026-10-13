@@ -11,7 +11,7 @@ import com.example.digital_reports_app.data.local.entity.UserEntity
 
 @Database(
     entities = [UserEntity::class, ReportEntity::class, TemplateEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

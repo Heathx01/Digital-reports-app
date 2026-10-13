@@ -2,6 +2,8 @@ package com.example.digital_reports_app.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.digital_reports_app.data.local.dao.ReportDao
 import com.example.digital_reports_app.data.local.dao.TemplateDao
 import com.example.digital_reports_app.data.local.dao.UserDao
@@ -21,6 +23,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reports ADD COLUMN formTemplateId TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE reports ADD COLUMN formDataJson TEXT NOT NULL DEFAULT ''")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -29,6 +38,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "digital_reports.db"
         )
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
 

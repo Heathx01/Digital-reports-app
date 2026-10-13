@@ -33,8 +33,19 @@ data class CreateReportUiState(
     val isAnalyzingDocument: Boolean = false,
     val savedTemplates: List<ReportTemplateItem> = emptyList(),
     val errorMessage: String? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val isAdmin: Boolean = false
 )
+
+/** Plantillas instaladas por defecto en cada dispositivo: se pueden editar, pero NO eliminar. */
+val PREDEFINED_TEMPLATE_IDS: Set<String> = setOf("tpl_1", "tpl_2", "tpl_3", "tpl_4")
+
+/**
+ * SUBIR este número cada vez que cambies la definición de una plantilla predefinida
+ * (predefinedTemplates). Al instalar el APK nuevo como actualización, las plantillas
+ * predefinidas se reemplazan por la versión nueva en cada dispositivo.
+ */
+const val PREDEFINED_CATALOG_VERSION: Int = 1
 
 @HiltViewModel
 class CreateReportViewModel @Inject constructor(
@@ -48,16 +59,30 @@ class CreateReportViewModel @Inject constructor(
     val uiState: StateFlow<CreateReportUiState> = _uiState.asStateFlow()
 
     init {
+        loadCurrentUserRole()
         loadTemplatesFromDb()
+    }
+
+    private fun loadCurrentUserRole() {
+        viewModelScope.launch {
+            val userId = authRepository.getCurrentUserId().first()
+            val user = if (userId != null) authRepository.getUserById(userId) else null
+            _uiState.update { it.copy(isAdmin = user?.role == "ADMIN") }
+        }
     }
 
     private fun loadTemplatesFromDb() {
         viewModelScope.launch {
-            val hasSeeded = sessionManager.hasSeededTemplates.first()
-
             templateRepository.getAllTemplates().collect { dbTemplates ->
-                if (dbTemplates.isEmpty() && !hasSeeded) {
-                    seedInitialTemplates()
+                val existingIds = dbTemplates.map { it.templateId }.toSet()
+                val installedVersion = sessionManager.installedCatalogVersion.first()
+                val needsUpgrade = installedVersion < PREDEFINED_CATALOG_VERSION
+                val missing = PREDEFINED_TEMPLATE_IDS.any { it !in existingIds }
+
+                if (needsUpgrade || missing) {
+                    // Primera instalación, actualización del APK o plantilla faltante.
+                    installPredefinedTemplates(overwriteExisting = needsUpgrade, existingIds = existingIds)
+                    sessionManager.setInstalledCatalogVersion(PREDEFINED_CATALOG_VERSION)
                     sessionManager.setHasSeededTemplates(true)
                 } else {
                     val converted = dbTemplates.map { entity ->
@@ -66,7 +91,8 @@ class CreateReportViewModel @Inject constructor(
                             title = entity.title,
                             category = entity.category,
                             description = entity.description,
-                            fields = jsonToFields(entity.fieldsJson).toMutableList()
+                            fields = jsonToFields(entity.fieldsJson).toMutableList(),
+                            isPredefined = entity.templateId in PREDEFINED_TEMPLATE_IDS
                         )
                     }
                     _uiState.update { it.copy(savedTemplates = converted) }
@@ -75,57 +101,73 @@ class CreateReportViewModel @Inject constructor(
         }
     }
 
-    private suspend fun seedInitialTemplates() {
-        val initialList = listOf(
-            ReportTemplateItem(
-                id = "tpl_1",
-                title = "Inspección Diaria de Planta",
-                category = "Inspección",
-                description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
-                fields = DocumentTextAnalyzer.createDefaultFields().toMutableList()
-            ),
-            ReportTemplateItem(
-                id = "tpl_2",
-                title = "Mantenimiento Preventivo de Maquinaria",
-                category = "Mantenimiento",
-                description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
-                fields = mutableListOf(
-                    CustomFormField("m_1", "Código de Maquinaria", FormFieldType.TEXT, "MQ-104"),
-                    CustomFormField("m_2", "Nivel de Aceite", FormFieldType.DROPDOWN, "Normal", listOf("Normal", "Bajo", "Crítico")),
-                    CustomFormField("m_3", "Presión (PSI)", FormFieldType.NUMBER, "120"),
-                    CustomFormField("m_4", "Observaciones de Mantenimiento", FormFieldType.TEXT, "Piezas en buen estado.")
+    /**
+     * Instala las plantillas predefinidas del código. Con [overwriteExisting] (cuando sube
+     * PREDEFINED_CATALOG_VERSION) reemplaza también las ya instaladas con la definición nueva;
+     * si no, solo agrega las que falten. Las plantillas creadas por el admin no se tocan.
+     */
+    private suspend fun installPredefinedTemplates(overwriteExisting: Boolean, existingIds: Set<String>) {
+        predefinedTemplates()
+            .filter { overwriteExisting || it.id !in existingIds }
+            .forEach { tpl ->
+                templateRepository.insertTemplate(
+                    TemplateEntity(
+                        templateId = tpl.id,
+                        title = tpl.title,
+                        category = tpl.category,
+                        description = tpl.description,
+                        fieldsJson = fieldsToJson(tpl.fields),
+                        timestamp = System.currentTimeMillis()
+                    )
                 )
-            ),
-            ReportTemplateItem(
-                id = "tpl_3",
-                title = "Control de Seguridad e Higiene",
-                category = "Incidencia",
-                description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
-                fields = mutableListOf(
-                    CustomFormField("s_1", "Zona de Trabajo", FormFieldType.TEXT, "Socavón / Nivel 2"),
-                    CustomFormField("s_2", "Uso de EPP", FormFieldType.DROPDOWN, "Conforme", listOf("Conforme", "Incompleto", "No Conforme")),
-                    CustomFormField("s_3", "Medición de Gas (PPM)", FormFieldType.NUMBER, "12"),
-                    CustomFormField("s_4", "Detalles de Seguridad", FormFieldType.TEXT, "Sin incidencias graves.")
-                )
-            ),
-            ReportTemplateItem(
-                id = "tpl_4",
-                title = "Auditoría de Almacén y Embalaje",
-                category = "General",
-                description = "Revisión de inventarios, cajas y estado de carga de materiales.",
-                fields = mutableListOf(
-                    CustomFormField("a_1", "Sector de Almacén", FormFieldType.TEXT, "Almacén B"),
-                    CustomFormField("a_2", "Estado de Empaque", FormFieldType.DROPDOWN, "Excelente", listOf("Excelente", "Dañado", "Incompleto")),
-                    CustomFormField("a_3", "Cantidad de Cajas", FormFieldType.NUMBER, "450"),
-                    CustomFormField("a_4", "Notas de Carga", FormFieldType.TEXT, "Carga lista para despacho.")
-                )
+            }
+    }
+
+    private fun predefinedTemplates(): List<ReportTemplateItem> = listOf(
+        ReportTemplateItem(
+            id = "tpl_1",
+            title = "Inspección Diaria de Planta",
+            category = "Inspección",
+            description = "Verificación general de infraestructura, equipos y condiciones ambientales.",
+            fields = DocumentTextAnalyzer.createDefaultFields().toMutableList()
+        ),
+        ReportTemplateItem(
+            id = "tpl_2",
+            title = "Mantenimiento Preventivo de Maquinaria",
+            category = "Mantenimiento",
+            description = "Revisión de lubricación, presión y componentes mecánicos de planta.",
+            fields = mutableListOf(
+                CustomFormField("m_1", "Código de Maquinaria", FormFieldType.TEXT, "MQ-104"),
+                CustomFormField("m_2", "Nivel de Aceite", FormFieldType.DROPDOWN, "Normal", listOf("Normal", "Bajo", "Crítico")),
+                CustomFormField("m_3", "Presión (PSI)", FormFieldType.NUMBER, "120"),
+                CustomFormField("m_4", "Observaciones de Mantenimiento", FormFieldType.TEXT, "Piezas en buen estado.")
+            )
+        ),
+        ReportTemplateItem(
+            id = "tpl_3",
+            title = "Control de Seguridad e Higiene",
+            category = "Incidencia",
+            description = "Auditoría de equipos EPP, ventilación y protocolos de riesgo laboral.",
+            fields = mutableListOf(
+                CustomFormField("s_1", "Zona de Trabajo", FormFieldType.TEXT, "Socavón / Nivel 2"),
+                CustomFormField("s_2", "Uso de EPP", FormFieldType.DROPDOWN, "Conforme", listOf("Conforme", "Incompleto", "No Conforme")),
+                CustomFormField("s_3", "Medición de Gas (PPM)", FormFieldType.NUMBER, "12"),
+                CustomFormField("s_4", "Detalles de Seguridad", FormFieldType.TEXT, "Sin incidencias graves.")
+            )
+        ),
+        ReportTemplateItem(
+            id = "tpl_4",
+            title = "Auditoría de Almacén y Embalaje",
+            category = "General",
+            description = "Revisión de inventarios, cajas y estado de carga de materiales.",
+            fields = mutableListOf(
+                CustomFormField("a_1", "Sector de Almacén", FormFieldType.TEXT, "Almacén B"),
+                CustomFormField("a_2", "Estado de Empaque", FormFieldType.DROPDOWN, "Excelente", listOf("Excelente", "Dañado", "Incompleto")),
+                CustomFormField("a_3", "Cantidad de Cajas", FormFieldType.NUMBER, "450"),
+                CustomFormField("a_4", "Notas de Carga", FormFieldType.TEXT, "Carga lista para despacho.")
             )
         )
-
-        initialList.forEach { tpl ->
-            saveTemplateToDb(tpl.title, tpl.category, tpl.description, tpl.fields, tpl.id)
-        }
-    }
+    )
 
     fun analyzeAndProcessScannedPhoto(
         bitmap: Bitmap,
@@ -179,14 +221,17 @@ class CreateReportViewModel @Inject constructor(
     }
 
     fun deleteTemplateFromDb(templateId: String) {
+        if (templateId in PREDEFINED_TEMPLATE_IDS) return
         viewModelScope.launch {
             templateRepository.deleteTemplate(templateId)
         }
     }
 
     fun deleteTemplatesByIdsFromDb(templateIds: List<String>) {
+        val deletable = templateIds.filterNot { it in PREDEFINED_TEMPLATE_IDS }
+        if (deletable.isEmpty()) return
         viewModelScope.launch {
-            templateRepository.deleteTemplatesByIds(templateIds)
+            templateRepository.deleteTemplatesByIds(deletable)
         }
     }
 

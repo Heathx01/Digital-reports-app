@@ -25,6 +25,16 @@ import java.io.FileOutputStream
 object PdfReportGenerator {
 
     fun generatePdfReport(context: Context, report: ReportEntity): File {
+        if (report.formDataJson.isNotBlank()) {
+            com.example.digital_reports_app.domain.model.FormCatalog.byId(report.formTemplateId)?.let { form ->
+                return StructuredPdfGenerator.generate(
+                    context,
+                    report,
+                    form,
+                    com.example.digital_reports_app.domain.model.jsonToAnswers(report.formDataJson)
+                )
+            }
+        }
         val pdfDocument = PdfDocument()
 
         val pageWidth = 595

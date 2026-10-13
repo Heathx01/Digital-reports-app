@@ -3,6 +3,7 @@ package com.example.digital_reports_app.data.local
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,6 +27,7 @@ class SessionManager @Inject constructor(
         private val KEY_LANGUAGE = stringPreferencesKey("app_language")
         private val KEY_IS_AUTO_SYNC_ENABLED = booleanPreferencesKey("is_auto_sync_enabled")
         private val KEY_HAS_SEEDED_TEMPLATES = booleanPreferencesKey("has_seeded_templates")
+        private val KEY_CATALOG_VERSION = intPreferencesKey("installed_catalog_version")
     }
 
     val currentUserId: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -58,6 +60,10 @@ class SessionManager @Inject constructor(
 
     val hasSeededTemplates: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_HAS_SEEDED_TEMPLATES] ?: false
+    }
+
+    val installedCatalogVersion: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[KEY_CATALOG_VERSION] ?: 0
     }
 
     suspend fun setAutoSyncEnabled(enabled: Boolean) {
@@ -100,9 +106,17 @@ class SessionManager @Inject constructor(
         }
     }
 
+    suspend fun setInstalledCatalogVersion(version: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_CATALOG_VERSION] = version
+        }
+    }
+
     suspend fun clearSession() {
         context.dataStore.edit { preferences ->
-            preferences.clear()
+            preferences.remove(KEY_USER_ID)
+            preferences.remove(KEY_USER_NAME)
+            preferences.remove(KEY_USER_CODE)
         }
     }
 }

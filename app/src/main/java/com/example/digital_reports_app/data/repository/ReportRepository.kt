@@ -13,6 +13,15 @@ interface ReportRepository {
         authorCode: String,
         authorName: String
     ): Result<Unit>
+    suspend fun createStructuredReport(
+        title: String,
+        category: String,
+        description: String,
+        formTemplateId: String,
+        formDataJson: String,
+        authorCode: String,
+        authorName: String
+    ): Result<String>
     suspend fun updateReportStatus(reportId: String, status: String): Result<Unit>
     suspend fun deleteReport(reportId: String): Result<Unit>
 }

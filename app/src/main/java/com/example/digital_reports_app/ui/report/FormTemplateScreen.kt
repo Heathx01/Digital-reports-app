@@ -90,13 +90,15 @@ data class ReportTemplateItem(
     var category: String,
     var description: String,
     val icon: ImageVector = Icons.Outlined.Edit,
-    val fields: MutableList<CustomFormField> = mutableStateListOf()
+    val fields: MutableList<CustomFormField> = mutableStateListOf(),
+    val isPredefined: Boolean = false
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FormTemplateScreen(
     onBack: () -> Unit,
+    onOpenGuidedForms: () -> Unit = {},
     viewModel: CreateReportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -351,6 +353,15 @@ fun FormTemplateScreen(
         ) {
             // STEP 1: CATALOG OF TEMPLATES
             if (selectedTemplate == null) {
+                Button(
+                    onClick = onOpenGuidedForms,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Llenar formato paso a paso y generar PDF", fontWeight = FontWeight.Bold)
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -445,7 +456,13 @@ fun FormTemplateScreen(
                                     }
                                 },
                                 onLongClick = {
-                                    if (!isSelectionMode) {
+                                    if (template.isPredefined) {
+                                        Toast.makeText(
+                                            context,
+                                            "Las plantillas predefinidas no se pueden eliminar.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else if (!isSelectionMode) {
                                         startSelection(template.id)
                                     } else {
                                         toggleSelection(template.id)
@@ -497,7 +514,8 @@ fun FormTemplateScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Tipo: ${template.category} • ${template.fields.size} campos",
+                                            text = "Tipo: ${template.category} • ${template.fields.size} campos" +
+                                                if (template.isPredefined) " • Predefinida" else "",
                                             style = TelemetryMonoStyle,
                                             color = MaterialTheme.colorScheme.primary
                                         )

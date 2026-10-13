@@ -1,0 +1,385 @@
+package com.example.digital_reports_app.ui.report
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.digital_reports_app.domain.model.FormItem
+import com.example.digital_reports_app.domain.model.FormKeys
+import com.example.digital_reports_app.domain.model.FormSection
+import com.example.digital_reports_app.domain.model.RowKind
+import com.example.digital_reports_app.domain.model.jsonToStrokes
+import com.example.digital_reports_app.domain.model.strokesToJson
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GuidedFormScreen(
+    onBack: () -> Unit,
+    onSaved: (String) -> Unit,
+    viewModel: GuidedFormViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    val form = state.form
+    val steps = state.steps
+
+    LaunchedEffect(state.savedReportId) {
+        state.savedReportId?.let(onSaved)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = form?.name ?: "Formatos guiados",
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { if (form != null) viewModel.backToList() else onBack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            if (form != null && steps.isNotEmpty()) {
+                val isLast = state.stepIndex == steps.lastIndex
+                Surface(tonalElevation = 3.dp) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.previous() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) { Text(if (state.stepIndex == 0) "Cambiar formato" else "Atrás") }
+
+                        Button(
+                            onClick = { if (isLast) viewModel.save() else viewModel.next() },
+                            enabled = !state.isSaving,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (state.isSaving) {
+                                CircularProgressIndicator(modifier = Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(if (isLast) "Generar reporte" else "Siguiente")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        if (form == null) {
+            FormPicker(
+                modifier = Modifier.padding(padding),
+                onSelect = { viewModel.selectForm(it) },
+                forms = state.forms.map { Triple(it.id, it.name, "${it.code} · ${it.pages.size} página(s) · Predefinido") }
+            )
+        } else if (steps.isNotEmpty()) {
+            val step = steps[state.stepIndex.coerceIn(0, steps.lastIndex)]
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .imePadding()
+            ) {
+                // Barra de progreso
+                val fraction = (state.stepIndex + 1f) / steps.size
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction)
+                            .height(4.dp)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Paso ${state.stepIndex + 1} de ${steps.size} · ${step.page.title}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(step.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+                    when (step) {
+                        is GuidedStep.Header -> step.page.headerFields.forEach { f ->
+                            val key = FormKeys.header(step.page.id, f.id)
+                            OutlinedTextField(
+                                value = state.answers[key].orEmpty(),
+                                onValueChange = { viewModel.setAnswer(key, it) },
+                                label = { Text(f.label.lowercase().replaceFirstChar { it.uppercase() }) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+
+                        is GuidedStep.Checklist -> step.section.items.forEach { item ->
+                            ChecklistItem(
+                                section = step.section,
+                                item = item,
+                                answers = state.answers,
+                                onToggle = { value -> viewModel.toggleAnswer(FormKeys.answer(item.id), value) },
+                                onValue = { viewModel.setAnswer(FormKeys.value(item.id), it) },
+                                onObs = { viewModel.setAnswer(FormKeys.obs(item.id), it) }
+                            )
+                        }
+
+                        is GuidedStep.Closing -> {
+                            OutlinedTextField(
+                                value = state.answers[FormKeys.comments(step.page.id)].orEmpty(),
+                                onValueChange = { viewModel.setAnswer(FormKeys.comments(step.page.id), it) },
+                                label = { Text(step.page.commentsLabel.trimEnd(':')) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 4
+                            )
+                            step.page.signatureLabels.forEachIndexed { i, label ->
+                                val nameKey = FormKeys.sigName(step.page.id, i)
+                                val strokesKey = FormKeys.sigStrokes(step.page.id, i)
+                                Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                OutlinedTextField(
+                                    value = state.answers[nameKey].orEmpty(),
+                                    onValueChange = { viewModel.setAnswer(nameKey, it) },
+                                    label = { Text("Nombre de quien firma") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                SignaturePad(
+                                    strokesJson = state.answers[strokesKey].orEmpty(),
+                                    onChange = { viewModel.setAnswer(strokesKey, it) }
+                                )
+                            }
+                        }
+                    }
+
+                    state.errorMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormPicker(
+    modifier: Modifier,
+    forms: List<Triple<String, String, String>>,
+    onSelect: (String) -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "Elige el formato que quieres llenar. Ingresarás los datos paso a paso y la app generará el reporte completo en PDF.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        forms.forEach { (id, name, subtitle) ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(id) },
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChecklistItem(
+    section: FormSection,
+    item: FormItem,
+    answers: Map<String, String>,
+    onToggle: (String) -> Unit,
+    onValue: (String) -> Unit,
+    onObs: (String) -> Unit
+) {
+    val current = answers[FormKeys.answer(item.id)].orEmpty()
+    Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(item.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+
+            if (section.kind == RowKind.MEASURE) {
+                OutlinedTextField(
+                    value = answers[FormKeys.value(item.id)].orEmpty(),
+                    onValueChange = onValue,
+                    label = { Text("Medición") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Text)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(section.kind.positive, section.kind.negative).forEach { option ->
+                    FilterChip(
+                        selected = current == option,
+                        onClick = { onToggle(option) },
+                        label = { Text(option) }
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = answers[FormKeys.obs(item.id)].orEmpty(),
+                onValueChange = onObs,
+                label = { Text("Observaciones (opcional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun SignaturePad(strokesJson: String, onChange: (String) -> Unit) {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val strokes = remember(strokesJson) {
+        mutableStateListOf<List<Pair<Float, Float>>>().apply { addAll(jsonToStrokes(strokesJson)) }
+    }
+    var current by remember { mutableStateOf<List<Pair<Float, Float>>>(emptyList()) }
+
+    fun norm(o: Offset): Pair<Float, Float> {
+        val w = size.width.coerceAtLeast(1)
+        val h = size.height.coerceAtLeast(1)
+        return (o.x / w).coerceIn(0f, 1f) to (o.y / h).coerceIn(0f, 1f)
+    }
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .background(Color.White, RoundedCornerShape(10.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                .onSizeChanged { size = it }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { o -> current = listOf(norm(o)) },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            current = current + norm(change.position)
+                        },
+                        onDragEnd = {
+                            if (current.size > 1) {
+                                strokes.add(current)
+                                onChange(strokesToJson(strokes.toList()))
+                            }
+                            current = emptyList()
+                        },
+                        onDragCancel = { current = emptyList() }
+                    )
+                }
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                (strokes.toList() + listOf(current)).forEach { stroke ->
+                    if (stroke.size > 1) {
+                        val path = Path()
+                        stroke.forEachIndexed { i, (nx, ny) ->
+                            val x = nx * this.size.width
+                            val y = ny * this.size.height
+                            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                        }
+                        drawPath(path, Color.Black, style = Stroke(width = 4f, cap = StrokeCap.Round))
+                    }
+                }
+            }
+            if (strokes.isEmpty() && current.isEmpty()) {
+                Text(
+                    "Firma aquí con el dedo",
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            }
+        }
+        TextButton(onClick = {
+            strokes.clear()
+            current = emptyList()
+            onChange("")
+        }) { Text("Borrar firma") }
+    }
+}

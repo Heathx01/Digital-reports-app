@@ -19,6 +19,7 @@ import com.example.digital_reports_app.ui.profile.ProfileScreen
 import com.example.digital_reports_app.ui.report.BitacoraScreen
 import com.example.digital_reports_app.ui.report.ExportShareScreen
 import com.example.digital_reports_app.ui.report.FormTemplateScreen
+import com.example.digital_reports_app.ui.report.GuidedFormScreen
 import com.example.digital_reports_app.ui.report.ReportDetailScreen
 
 object Screen {
@@ -26,6 +27,7 @@ object Screen {
     const val HOME = "home"
     const val REPORTS_LIST = "reports_list"
     const val CREATE_REPORT = "create_report"
+    const val GUIDED_FORM = "guided_form"
     const val BITACORA = "bitacora"
     const val REPORT_DETAIL = "report_detail/{reportId}"
     const val EXPORT_SHARE = "export_share/{reportId}"
@@ -117,6 +119,21 @@ fun AppNavigation(
             FormTemplateScreen(
                 onBack = {
                     navController.popBackStack()
+                },
+                onOpenGuidedForms = {
+                    navController.navigate(Screen.GUIDED_FORM)
+                }
+            )
+        }
+        composable(Screen.GUIDED_FORM) {
+            GuidedFormScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onSaved = { reportId ->
+                    navController.navigate(Screen.reportDetailRoute(reportId)) {
+                        popUpTo(Screen.GUIDED_FORM) { inclusive = true }
+                    }
                 }
             )
         }

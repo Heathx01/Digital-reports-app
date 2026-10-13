@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -13,5 +14,7 @@ data class ReportEntity(
     val dateFormatted: String,
     val timestamp: Long,
     val authorCode: String,
-    val authorName: String
+    val authorName: String,
+    @ColumnInfo(defaultValue = "") val formTemplateId: String = "",
+    @ColumnInfo(defaultValue = "") val formDataJson: String = ""
 )

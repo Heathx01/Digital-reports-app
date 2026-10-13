@@ -59,6 +59,40 @@ class ReportRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun createStructuredReport(
+        title: String,
+        category: String,
+        description: String,
+        formTemplateId: String,
+        formDataJson: String,
+        authorCode: String,
+        authorName: String
+    ): Result<String> {
+        return try {
+            val now = System.currentTimeMillis()
+            val dateFormatted = SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.getDefault()).format(Date(now))
+            val reportId = "REP-${UUID.randomUUID().toString().take(8).uppercase()}"
+            reportDao.insertReport(
+                ReportEntity(
+                    reportId = reportId,
+                    title = title.trim(),
+                    category = category.trim(),
+                    description = description.trim(),
+                    status = "COMPLETADO",
+                    dateFormatted = dateFormatted,
+                    timestamp = now,
+                    authorCode = authorCode,
+                    authorName = authorName,
+                    formTemplateId = formTemplateId,
+                    formDataJson = formDataJson
+                )
+            )
+            Result.success(reportId)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun updateReportStatus(reportId: String, status: String): Result<Unit> {
         return try {
             reportDao.updateReportStatus(reportId, status)
