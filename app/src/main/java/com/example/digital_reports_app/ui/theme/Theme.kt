@@ -112,8 +112,8 @@ fun Modifier.liquidGlass(
 }
 
 /**
- * Sobrecarga que detecta automáticamente si el tema actual está en modo oscuro
- * utilizando el MaterialTheme del contexto composable.
+ * Sobrecarga que detecta automáticamente si el tema actual de la APP está en modo oscuro
+ * utilizando la composición de tokens de DocuFieldTheme.
  */
 @Composable
 fun Modifier.liquidGlass(
@@ -122,7 +122,7 @@ fun Modifier.liquidGlass(
     prominent: Boolean = false,
     backgroundBlurRadius: Dp = 0.dp
 ): Modifier {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalLiquidGlassColors.current == DarkLiquidGlassColors
     return this.liquidGlass(
         isDarkTheme = isDark,
         cornerRadius = cornerRadius,
