@@ -206,52 +206,7 @@ object FormCatalog {
         )
     )
 
-    val inspeccionSeguridad = StructuredForm(
-        id = "INSP-SEG",
-        name = "Inspección de Seguridad (genérico)",
-        category = "Seguridad",
-        organization = "Mi Empresa",
-        documentTitle = "FORMATO DE INSPECCIÓN DE SEGURIDAD",
-        revision = "Actualización 1",
-        code = "INSP-SEG-001",
-        footer = "Medio: Digital   Retención: 6 meses",
-        pages = listOf(
-            FormPage(
-                id = "seg",
-                title = "INSPECCIÓN DE SEGURIDAD EN ÁREA DE TRABAJO",
-                headerFields = listOf(
-                    HeaderField("fecha", "FECHA", isDate = true),
-                    HeaderField("area", "ÁREA / UBICACIÓN"),
-                    HeaderField("inspector", "INSPECTOR"),
-                    HeaderField("responsable", "RESPONSABLE DEL ÁREA")
-                ),
-                sections = listOf(
-                    FormSection(
-                        "seg_epp", "Equipo de protección personal", RowKind.COMPLY,
-                        items(
-                            "seg_epp",
-                            "El personal usa casco, chaleco y calzado de seguridad",
-                            "Se usa protección auditiva y visual donde se requiere",
-                            "Los EPP están en buen estado"
-                        )
-                    ),
-                    FormSection(
-                        "seg_con", "Condiciones del área", RowKind.YES_NO,
-                        items(
-                            "seg_con",
-                            "Las salidas de emergencia están señalizadas y libres?",
-                            "Los extintores están vigentes y accesibles?",
-                            "El área está limpia y ordenada?"
-                        )
-                    )
-                ),
-                commentsLabel = "Hallazgos / acciones correctivas:",
-                signatureLabels = listOf("FIRMA INSPECTOR", "FIRMA RESPONSABLE DEL ÁREA")
-            )
-        )
-    )
-
-    val all: List<StructuredForm> = listOf(recepcionEntregaLotes, inspeccionSeguridad)
+    val all: List<StructuredForm> = listOf(recepcionEntregaLotes)
 
     fun byId(id: String): StructuredForm? = all.firstOrNull { it.id == id }
 }
