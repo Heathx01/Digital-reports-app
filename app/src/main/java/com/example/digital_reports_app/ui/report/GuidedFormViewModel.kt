@@ -9,6 +9,7 @@ import com.example.digital_reports_app.domain.model.FormCatalog
 import com.example.digital_reports_app.domain.model.FormKeys
 import com.example.digital_reports_app.domain.model.FormPage
 import com.example.digital_reports_app.domain.model.FormSection
+import com.example.digital_reports_app.domain.model.RowKind
 import com.example.digital_reports_app.domain.model.StructuredForm
 import com.example.digital_reports_app.domain.model.answersToJson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -104,24 +105,44 @@ class GuidedFormViewModel @Inject constructor(
     }
 
     fun next() {
-        _uiState.update { it.copy(stepIndex = (it.stepIndex + 1).coerceAtMost((it.steps.size - 1).coerceAtLeast(0))) }
+        val state = _uiState.value
+        val steps = state.steps
+        if (steps.isEmpty()) return
+
+        val currentStep = steps[state.stepIndex.coerceIn(0, steps.lastIndex)]
+        val validationError = validateStep(currentStep, state.answers)
+
+        if (validationError != null) {
+            _uiState.update { it.copy(errorMessage = validationError) }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                stepIndex = (it.stepIndex + 1).coerceAtMost((it.steps.size - 1).coerceAtLeast(0)),
+                errorMessage = null
+            )
+        }
     }
 
     fun previous() {
         if (_uiState.value.stepIndex == 0) backToList()
-        else _uiState.update { it.copy(stepIndex = it.stepIndex - 1) }
+        else _uiState.update { it.copy(stepIndex = it.stepIndex - 1, errorMessage = null) }
     }
 
     fun save() {
         val state = _uiState.value
         val form = state.form ?: return
+        val steps = state.steps
         val answers = state.answers
 
-        val answeredItems = form.pages.flatMap { p -> p.sections.flatMap { it.items } }
-            .count { answers[FormKeys.answer(it.id)].orEmpty().isNotEmpty() }
-        if (answeredItems == 0) {
-            _uiState.update { it.copy(errorMessage = "Responde al menos un punto del formato antes de guardar.") }
-            return
+        if (steps.isNotEmpty()) {
+            val lastStep = steps.last()
+            val validationError = validateStep(lastStep, answers)
+            if (validationError != null) {
+                _uiState.update { it.copy(errorMessage = validationError) }
+                return
+            }
         }
 
         viewModelScope.launch {
@@ -141,7 +162,7 @@ class GuidedFormViewModel @Inject constructor(
             val total = form.pages.sumOf { p -> p.sections.sumOf { it.items.size } }
             val negatives = form.pages.flatMap { p -> p.sections.flatMap { s -> s.items.map { s to it } } }
                 .count { (s, item) -> answers[FormKeys.answer(item.id)] == s.kind.negative }
-            val description = "Formato ${form.code}: $answeredItems de $total puntos respondidos" +
+            val description = "Formato ${form.code}: $total de $total puntos respondidos" +
                 if (negatives > 0) ", $negatives con hallazgo (${"NO / NO CUMPLE"})." else "."
 
             val result = reportRepository.createStructuredReport(
@@ -160,5 +181,45 @@ class GuidedFormViewModel @Inject constructor(
                 _uiState.update { it.copy(isSaving = false, errorMessage = "No se pudo guardar: ${e.message}") }
             }
         }
+    }
+
+    private fun validateStep(step: GuidedStep, answers: Map<String, String>): String? {
+        when (step) {
+            is GuidedStep.Header -> {
+                step.page.headerFields.forEach { f ->
+                    val value = answers[FormKeys.header(step.page.id, f.id)].orEmpty().trim()
+                    if (value.isBlank()) {
+                        return "Por favor completa el campo '${f.label.replace(":", "")}' para continuar."
+                    }
+                }
+            }
+            is GuidedStep.Checklist -> {
+                step.section.items.forEach { item ->
+                    val ans = answers[FormKeys.answer(item.id)].orEmpty().trim()
+                    if (ans.isBlank()) {
+                        return "Por favor evalúa el punto: '${item.label}' (Selecciona ${step.section.kind.positive} o ${step.section.kind.negative})."
+                    }
+                    if (step.section.kind == RowKind.MEASURE) {
+                        val measureVal = answers[FormKeys.value(item.id)].orEmpty().trim()
+                        if (measureVal.isBlank()) {
+                            return "Por favor ingresa el valor de medición para '${item.label}'."
+                        }
+                    }
+                }
+            }
+            is GuidedStep.Closing -> {
+                step.page.signatureLabels.forEachIndexed { i, label ->
+                    val nameVal = answers[FormKeys.sigName(step.page.id, i)].orEmpty().trim()
+                    val strokesVal = answers[FormKeys.sigStrokes(step.page.id, i)].orEmpty().trim()
+                    if (nameVal.isBlank()) {
+                        return "Por favor ingresa el nombre para '$label'."
+                    }
+                    if (strokesVal.isBlank()) {
+                        return "Por favor dibuja la firma para '$label'."
+                    }
+                }
+            }
+        }
+        return null
     }
 }
