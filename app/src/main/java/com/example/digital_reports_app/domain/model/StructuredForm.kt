@@ -105,6 +105,7 @@ object FormCatalog {
     private fun items(prefix: String, vararg labels: String) =
         labels.mapIndexed { i, l -> FormItem("$prefix${i + 1}", l) }
 
+    // 1. Formato 2-CM-F005: Entrega y Recepción de Lote (.xlsx)
     val recepcionEntregaLotes = StructuredForm(
         id = "2-CM-F005",
         name = "Recepción y Entrega de Lotes (Cosecha Mecanizada)",
@@ -133,7 +134,7 @@ object FormCatalog {
                             "La Finca lote cuenta con acceso adecuado ?",
                             "Tiene cruceros intermedios adecuados ?",
                             "Tiene bahías de descargue (trasiego de caña) ?",
-                            "El lote dispone de rondas mayores o 4 metros y libres de obstáculos?"
+                            "El lote dispone de rondas mayores a 4 metros y libres de obstáculos?"
                         )
                     ),
                     FormSection(
@@ -206,6 +207,7 @@ object FormCatalog {
         )
     )
 
+    // 2. Formato 2-CM-F004: Permiso de Enganche y Desenganche de Carretas (.xlsx)
     val engancheDesengancheCarretas = StructuredForm(
         id = "2-CM-F004",
         name = "Permiso de Enganche y Desenganche de Carretas",
@@ -290,7 +292,119 @@ object FormCatalog {
         )
     )
 
-    val all: List<StructuredForm> = listOf(recepcionEntregaLotes, engancheDesengancheCarretas)
+    // 3. Formato 2-CM-F006: Análisis de Trabajo Seguro ATS (.pdf)
+    val atsCosechaMecanizada = StructuredForm(
+        id = "2-CM-F006",
+        name = "Análisis de Trabajo Seguro (ATS) Cosecha Mecanizada",
+        category = "Seguridad",
+        organization = "Pantaleon",
+        documentTitle = "ANÁLISIS DE TRABAJO SEGURO (ATS)\nCOSECHA MECANIZADA",
+        revision = "Actualización 2: 15/10/2025",
+        code = "2-CM-F006",
+        footer = "Lugar: Frente de Cosecha Mecanizada   Medio: Papel   Responsable: Supervisor de Seguridad   Retención: 1 año   Disposición: Archivo",
+        pages = listOf(
+            FormPage(
+                id = "ats_p1",
+                title = "IDENTIFICACIÓN Y EVALUACIÓN DE RIESGOS EN CAMPO",
+                headerFields = listOf(
+                    HeaderField("fecha", "FECHA DE EVALUACIÓN", isDate = true),
+                    HeaderField("frente", "FRENTE DE CORTE"),
+                    HeaderField("finca_lote", "FINCA / LOTE"),
+                    HeaderField("sup_seguridad", "SUPERVISOR DE SEGURIDAD"),
+                    HeaderField("equipo_operativo", "EQUIPO Y MAQUINARIA")
+                ),
+                sections = listOf(
+                    FormSection(
+                        "ats_pasos", "Evaluación de Pasos Críticos de la Tarea", RowKind.YES_NO,
+                        items(
+                            "ats_pasos",
+                            "Inspección pre-operacional de maquinaria realizada?",
+                            "Verificación de vías de acceso y pendiente del terreno?",
+                            "Distanciamiento seguro entre cosechadoras y tractores?",
+                            "Bloqueo de energías peligrosas previo a mantenimientos?"
+                        )
+                    ),
+                    FormSection(
+                        "ats_epp", "Medidas de Control y Equipo de Protección", RowKind.COMPLY,
+                        items(
+                            "ats_epp",
+                            "Uso obligatorio de EPP completo en campo",
+                            "Delimitación y señalización de zona de maniobras",
+                            "Radios de comunicación operacional probados y activos",
+                            "Protocolo de emergencia y botiquín disponible en frente"
+                        )
+                    )
+                ),
+                commentsLabel = "Acciones Correctivas Inmediatas y Observaciones:",
+                signatureLabels = listOf(
+                    "FIRMA SUPERVISOR DE SEGURIDAD",
+                    "FIRMA DEL OPERADOR RESPONSABLE"
+                )
+            )
+        )
+    )
+
+    // 4. Formato 2-CM-F008: Registro de Validación de Lotes (.xlsx)
+    val validacionLotes = StructuredForm(
+        id = "2-CM-F008",
+        name = "Registro de Validación de Lotes",
+        category = "Cosecha Mecanizada",
+        organization = "Pantaleon",
+        documentTitle = "REGISTRO DE VALIDACIÓN DE LOTES",
+        revision = "Actualización 10: 11/09/2025",
+        code = "2-CM-F008",
+        footer = "Lugar: Cosecha Mecanizada   Medio: Papel   Responsable: Jefe de Cosecha Mecanizada   Retención: 6 meses   Disposición: Destruir",
+        pages = listOf(
+            FormPage(
+                id = "val_lotes",
+                title = "EVALUACIÓN Y PONDERACIÓN DE CRITERIOS DE LOTE",
+                headerFields = listOf(
+                    HeaderField("fecha", "FECHA", isDate = true),
+                    HeaderField("nombre_finca", "NOMBRE DE FINCA"),
+                    HeaderField("zona_produccion", "ZONA DE PRODUCCIÓN"),
+                    HeaderField("codigo_finca", "CÓDIGO DE FINCA"),
+                    HeaderField("correlativo", "CORRELATIVO")
+                ),
+                sections = listOf(
+                    FormSection(
+                        "val_crit1", "Evaluación de Infraestructura y Vías", RowKind.COMPLY,
+                        items(
+                            "val_crit1",
+                            "Longitud de surcos conforme (> 150m)",
+                            "Existencia de Bahía de Descargue (300m a 1km)",
+                            "Anchos de rondas libres de obstáculos (4m a 6m)",
+                            "Circuito cañero adecuado (6m a 8m)",
+                            "Crucero intermedio conforme a diseño (3m a 4m)"
+                        )
+                    ),
+                    FormSection(
+                        "val_crit2", "Condiciones Agrícolas y de Suelo", RowKind.COMPLY,
+                        items(
+                            "val_crit2",
+                            "Rendimientos agrícolas adecuados (>= 80 t/ha)",
+                            "Lote libre de obstáculos (piedras, árboles, terrazas)",
+                            "Distancia entre surcos adecuada (>= 1.50m)",
+                            "Números de cortes en rango (0 a 3 cortes)",
+                            "Condición de humedad del terreno (Seco)",
+                            "Nivelación del crucero con respecto al cuadro (<= 15cm)"
+                        )
+                    )
+                ),
+                commentsLabel = "Comentarios Generales y Resultado de Validación:",
+                signatureLabels = listOf(
+                    "FIRMA SUPERVISOR DE COSECHA MECANIZADA",
+                    "FIRMA JEFE DE COSECHA MECANIZADA"
+                )
+            )
+        )
+    )
+
+    val all: List<StructuredForm> = listOf(
+        recepcionEntregaLotes,
+        engancheDesengancheCarretas,
+        atsCosechaMecanizada,
+        validacionLotes
+    )
 
     fun byId(id: String): StructuredForm? = all.firstOrNull { it.id == id }
 }
