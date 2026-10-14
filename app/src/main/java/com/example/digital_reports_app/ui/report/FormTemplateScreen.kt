@@ -191,7 +191,7 @@ fun FormTemplateScreen(
                 .imePadding()
         ) {
             Text(
-                text = "Formatos Predeterminados de la Empresa",
+                text = "Selecciona una plantilla",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
