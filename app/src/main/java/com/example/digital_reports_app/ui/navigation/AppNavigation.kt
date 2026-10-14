@@ -20,7 +20,6 @@ import com.example.digital_reports_app.ui.report.BitacoraScreen
 import com.example.digital_reports_app.ui.report.ExportShareScreen
 import com.example.digital_reports_app.ui.report.FormTemplateScreen
 import com.example.digital_reports_app.ui.report.GuidedFormScreen
-import com.example.digital_reports_app.ui.report.ReportDetailScreen
 
 object Screen {
     const val LOGIN = "login"
@@ -29,12 +28,10 @@ object Screen {
     const val CREATE_REPORT = "create_report"
     const val GUIDED_FORM = "guided_form?formId={formId}"
     const val BITACORA = "bitacora"
-    const val REPORT_DETAIL = "report_detail/{reportId}"
     const val EXPORT_SHARE = "export_share/{reportId}"
     const val PROFILE = "profile"
 
     fun guidedFormRoute(formId: String? = null) = if (!formId.isNullOrBlank()) "guided_form?formId=$formId" else "guided_form"
-    fun reportDetailRoute(reportId: String) = "report_detail/$reportId"
     fun exportShareRoute(reportId: String) = "export_share/$reportId"
 }
 
@@ -91,7 +88,7 @@ fun AppNavigation(
                     navController.navigate(Screen.CREATE_REPORT)
                 },
                 onReportClick = { reportId ->
-                    navController.navigate(Screen.reportDetailRoute(reportId))
+                    navController.navigate(Screen.exportShareRoute(reportId))
                 },
                 onProfileClick = {
                     navController.navigate(Screen.PROFILE)
@@ -104,7 +101,7 @@ fun AppNavigation(
         composable(Screen.BITACORA) {
             BitacoraScreen(
                 onReportClick = { reportId ->
-                    navController.navigate(Screen.reportDetailRoute(reportId))
+                    navController.navigate(Screen.exportShareRoute(reportId))
                 },
                 onTabSelected = { route ->
                     when (route) {
@@ -147,22 +144,9 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onSaved = { reportId ->
-                    navController.navigate(Screen.reportDetailRoute(reportId)) {
+                    navController.navigate(Screen.exportShareRoute(reportId)) {
                         popUpTo(Screen.CREATE_REPORT) { inclusive = false }
                     }
-                }
-            )
-        }
-        composable(
-            route = Screen.REPORT_DETAIL,
-            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
-        ) {
-            ReportDetailScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
-                onExportClick = { reportId ->
-                    navController.navigate(Screen.exportShareRoute(reportId))
                 }
             )
         }
