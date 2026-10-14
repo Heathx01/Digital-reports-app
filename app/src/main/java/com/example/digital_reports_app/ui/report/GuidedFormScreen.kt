@@ -86,13 +86,13 @@ fun GuidedFormScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = form?.name ?: "Formatos guiados",
+                        text = form?.name ?: "Llenado de Formato",
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (form != null) viewModel.backToList() else onBack() }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 }
@@ -109,7 +109,13 @@ fun GuidedFormScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.previous() },
+                            onClick = {
+                                if (state.stepIndex == 0) {
+                                    onBack()
+                                } else {
+                                    viewModel.previous()
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         ) { Text(if (state.stepIndex == 0) "Cambiar formato" else "Atrás") }
