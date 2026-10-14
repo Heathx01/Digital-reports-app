@@ -1,8 +1,9 @@
 package com.example.digital_reports_app.ui.report
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -15,19 +16,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -51,8 +56,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
@@ -65,6 +72,7 @@ import com.example.digital_reports_app.domain.model.FormSection
 import com.example.digital_reports_app.domain.model.RowKind
 import com.example.digital_reports_app.domain.model.jsonToStrokes
 import com.example.digital_reports_app.domain.model.strokesToJson
+import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,9 +84,16 @@ fun GuidedFormScreen(
     val state by viewModel.uiState.collectAsState()
     val form = state.form
     val steps = state.steps
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(state.savedReportId) {
         state.savedReportId?.let(onSaved)
+    }
+
+    LaunchedEffect(state.errorMessage) {
+        if (state.errorMessage != null) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
     }
 
     Scaffold(
@@ -110,6 +125,7 @@ fun GuidedFormScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 if (state.stepIndex == 0) {
                                     onBack()
                                 } else {
@@ -121,7 +137,10 @@ fun GuidedFormScreen(
                         ) { Text(if (state.stepIndex == 0) "Cambiar formato" else "Atrás") }
 
                         Button(
-                            onClick = { if (isLast) viewModel.save() else viewModel.next() },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                if (isLast) viewModel.save() else viewModel.next()
+                            },
                             enabled = !state.isSaving,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
@@ -145,25 +164,49 @@ fun GuidedFormScreen(
             )
         } else if (steps.isNotEmpty()) {
             val step = steps[state.stepIndex.coerceIn(0, steps.lastIndex)]
+            val fraction = (state.stepIndex + 1f) / steps.size
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .imePadding()
             ) {
-                // Barra de progreso
-                val fraction = (state.stepIndex + 1f) / steps.size
-                Box(
+                // Real-time Field Completion Progress Bar
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Box(
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Progreso de Llenado",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Paso ${state.stepIndex + 1} de ${steps.size} (${(fraction * 100).toInt()}%)",
+                            style = TelemetryMonoStyle.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    LinearProgressIndicator(
+                        progress = { fraction },
                         modifier = Modifier
-                            .fillMaxWidth(fraction)
-                            .height(4.dp)
-                            .background(MaterialTheme.colorScheme.primary)
+                            .fillMaxWidth()
+                            .height(6.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
 
@@ -172,25 +215,35 @@ fun GuidedFormScreen(
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Paso ${state.stepIndex + 1} de ${steps.size} · ${step.page.title}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
                     Text(step.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                     when (step) {
-                        is GuidedStep.Header -> step.page.headerFields.forEach { f ->
-                            val key = FormKeys.header(step.page.id, f.id)
-                            OutlinedTextField(
-                                value = state.answers[key].orEmpty(),
-                                onValueChange = { viewModel.setAnswer(key, it) },
-                                label = { Text(f.label.lowercase().replaceFirstChar { it.uppercase() }) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
-                            )
+                        is GuidedStep.Header -> {
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    step.page.headerFields.forEach { f ->
+                                        val key = FormKeys.header(step.page.id, f.id)
+                                        OutlinedTextField(
+                                            value = state.answers[key].orEmpty(),
+                                            onValueChange = { viewModel.setAnswer(key, it) },
+                                            label = { Text("${f.label.lowercase().replaceFirstChar { it.uppercase() }} *") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         is GuidedStep.Checklist -> step.section.items.forEach { item ->
@@ -198,41 +251,87 @@ fun GuidedFormScreen(
                                 section = step.section,
                                 item = item,
                                 answers = state.answers,
-                                onToggle = { value -> viewModel.toggleAnswer(FormKeys.answer(item.id), value) },
+                                onToggle = { value ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.toggleAnswer(FormKeys.answer(item.id), value)
+                                },
                                 onValue = { viewModel.setAnswer(FormKeys.value(item.id), it) },
                                 onObs = { viewModel.setAnswer(FormKeys.obs(item.id), it) }
                             )
                         }
 
                         is GuidedStep.Closing -> {
-                            OutlinedTextField(
-                                value = state.answers[FormKeys.comments(step.page.id)].orEmpty(),
-                                onValueChange = { viewModel.setAnswer(FormKeys.comments(step.page.id), it) },
-                                label = { Text(step.page.commentsLabel.trimEnd(':')) },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 4
-                            )
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = state.answers[FormKeys.comments(step.page.id)].orEmpty(),
+                                        onValueChange = { viewModel.setAnswer(FormKeys.comments(step.page.id), it) },
+                                        label = { Text(step.page.commentsLabel.trimEnd(':')) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        minLines = 3
+                                    )
+                                }
+                            }
+
                             step.page.signatureLabels.forEachIndexed { i, label ->
                                 val nameKey = FormKeys.sigName(step.page.id, i)
                                 val strokesKey = FormKeys.sigStrokes(step.page.id, i)
-                                Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                OutlinedTextField(
-                                    value = state.answers[nameKey].orEmpty(),
-                                    onValueChange = { viewModel.setAnswer(nameKey, it) },
-                                    label = { Text("Nombre de quien firma") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                                SignaturePad(
-                                    strokesJson = state.answers[strokesKey].orEmpty(),
-                                    onChange = { viewModel.setAnswer(strokesKey, it) }
-                                )
+
+                                Card(
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                                        OutlinedTextField(
+                                            value = state.answers[nameKey].orEmpty(),
+                                            onValueChange = { viewModel.setAnswer(nameKey, it) },
+                                            label = { Text("Nombre de quien firma *") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true
+                                        )
+                                        SignaturePad(
+                                            strokesJson = state.answers[strokesKey].orEmpty(),
+                                            onChange = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                viewModel.setAnswer(strokesKey, it)
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
 
-                    state.errorMessage?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    state.errorMessage?.let { errorText ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(10.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = "⚠️ $errorText",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -262,7 +361,10 @@ private fun FormPicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onSelect(id) },
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -285,7 +387,13 @@ private fun ChecklistItem(
     onObs: (String) -> Unit
 ) {
     val current = answers[FormKeys.answer(item.id)].orEmpty()
-    Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(item.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
 
@@ -293,7 +401,7 @@ private fun ChecklistItem(
                 OutlinedTextField(
                     value = answers[FormKeys.value(item.id)].orEmpty(),
                     onValueChange = onValue,
-                    label = { Text("Medición") },
+                    label = { Text("Medición *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Text)

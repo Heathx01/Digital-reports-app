@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
@@ -81,11 +82,21 @@ class GuidedFormViewModel @Inject constructor(
 
     fun selectForm(formId: String) {
         val form = FormCatalog.byId(formId) ?: return
-        val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(now.time)
+        val timeNow = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now.time)
+        val shift = if (hour in 6..17) "DIURNO" else "NOCTURNO"
+
         val initial = mutableMapOf<String, String>()
         form.pages.forEach { page ->
-            page.headerFields.filter { it.isDate }.forEach {
-                initial[FormKeys.header(page.id, it.id)] = today
+            page.headerFields.forEach { field ->
+                val key = FormKeys.header(page.id, field.id)
+                when {
+                    field.isDate || field.id.contains("fecha", ignoreCase = true) -> initial[key] = today
+                    field.id.contains("hora", ignoreCase = true) -> initial[key] = timeNow
+                    field.id.contains("turno", ignoreCase = true) -> initial[key] = shift
+                }
             }
         }
         _uiState.update { it.copy(form = form, stepIndex = 0, answers = initial, errorMessage = null) }
