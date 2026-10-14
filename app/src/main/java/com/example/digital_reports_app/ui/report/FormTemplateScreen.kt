@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,11 +49,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.digital_reports_app.domain.model.FormCatalog
 import com.example.digital_reports_app.ui.navigation.Screen
@@ -62,14 +59,6 @@ import com.example.digital_reports_app.ui.navigation.WorkProBottomNavBar
 import com.example.digital_reports_app.ui.navigation.horizontalTabSwipeGesture
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
-
-data class ReportTemplateItem(
-    val id: String,
-    var title: String,
-    var category: String,
-    var description: String,
-    val icon: ImageVector = Icons.Outlined.Edit
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

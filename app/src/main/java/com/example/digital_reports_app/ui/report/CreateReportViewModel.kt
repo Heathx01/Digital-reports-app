@@ -17,6 +17,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class ReportTemplateItem(
+    val id: String,
+    val title: String,
+    val category: String,
+    val description: String
+)
+
 data class CreateReportUiState(
     val title: String = "",
     val category: String = "Inspección",
