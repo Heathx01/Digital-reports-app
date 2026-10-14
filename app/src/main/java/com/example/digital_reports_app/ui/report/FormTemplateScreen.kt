@@ -190,21 +190,6 @@ fun FormTemplateScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
         ) {
-            // SINGLE MAIN PRIMARY BUTTON: Abrir Asistente Guiado Paso a Paso
-            Button(
-                onClick = { onOpenGuidedForms(null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(bottom = 16.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text("📋 Llenar Formato Guiado Paso a Paso", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Formatos Predeterminados de la Empresa",
                 style = MaterialTheme.typography.titleMedium,
