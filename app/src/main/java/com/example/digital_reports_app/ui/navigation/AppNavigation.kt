@@ -27,12 +27,13 @@ object Screen {
     const val HOME = "home"
     const val REPORTS_LIST = "reports_list"
     const val CREATE_REPORT = "create_report"
-    const val GUIDED_FORM = "guided_form"
+    const val GUIDED_FORM = "guided_form?formId={formId}"
     const val BITACORA = "bitacora"
     const val REPORT_DETAIL = "report_detail/{reportId}"
     const val EXPORT_SHARE = "export_share/{reportId}"
     const val PROFILE = "profile"
 
+    fun guidedFormRoute(formId: String? = null) = if (!formId.isNullOrBlank()) "guided_form?formId=$formId" else "guided_form"
     fun reportDetailRoute(reportId: String) = "report_detail/$reportId"
     fun exportShareRoute(reportId: String) = "export_share/$reportId"
 }
@@ -120,8 +121,8 @@ fun AppNavigation(
                 onBack = {
                     navController.popBackStack()
                 },
-                onOpenGuidedForms = {
-                    navController.navigate(Screen.GUIDED_FORM)
+                onOpenGuidedForms = { formId ->
+                    navController.navigate(Screen.guidedFormRoute(formId))
                 },
                 onTabSelected = { route ->
                     when (route) {
@@ -133,14 +134,21 @@ fun AppNavigation(
                 }
             )
         }
-        composable(Screen.GUIDED_FORM) {
+        composable(
+            route = Screen.GUIDED_FORM,
+            arguments = listOf(navArgument("formId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             GuidedFormScreen(
                 onBack = {
                     navController.popBackStack()
                 },
                 onSaved = { reportId ->
                     navController.navigate(Screen.reportDetailRoute(reportId)) {
-                        popUpTo(Screen.GUIDED_FORM) { inclusive = true }
+                        popUpTo(Screen.CREATE_REPORT) { inclusive = false }
                     }
                 }
             )

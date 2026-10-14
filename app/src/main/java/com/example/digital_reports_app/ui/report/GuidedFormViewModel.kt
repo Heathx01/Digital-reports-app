@@ -1,5 +1,6 @@
 package com.example.digital_reports_app.ui.report
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.digital_reports_app.data.repository.AuthRepository
@@ -63,11 +64,19 @@ data class GuidedFormUiState(
 @HiltViewModel
 class GuidedFormViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GuidedFormUiState())
     val uiState: StateFlow<GuidedFormUiState> = _uiState.asStateFlow()
+
+    init {
+        val initialFormId: String? = savedStateHandle["formId"]
+        if (!initialFormId.isNullOrBlank()) {
+            selectForm(initialFormId)
+        }
+    }
 
     fun selectForm(formId: String) {
         val form = FormCatalog.byId(formId) ?: return

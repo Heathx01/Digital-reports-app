@@ -75,7 +75,7 @@ data class ReportTemplateItem(
 @Composable
 fun FormTemplateScreen(
     onBack: () -> Unit,
-    onOpenGuidedForms: () -> Unit = {},
+    onOpenGuidedForms: (String?) -> Unit = {},
     onTabSelected: (String) -> Unit = {},
     viewModel: CreateReportViewModel = hiltViewModel()
 ) {
@@ -192,7 +192,7 @@ fun FormTemplateScreen(
         ) {
             // SINGLE MAIN PRIMARY BUTTON: Abrir Asistente Guiado Paso a Paso
             Button(
-                onClick = onOpenGuidedForms,
+                onClick = { onOpenGuidedForms(null) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
@@ -235,7 +235,7 @@ fun FormTemplateScreen(
                                 if (isSelectionMode) {
                                     toggleSelection(form.id)
                                 } else {
-                                    onOpenGuidedForms()
+                                    onOpenGuidedForms(form.id)
                                 }
                             },
                             onLongClick = {
