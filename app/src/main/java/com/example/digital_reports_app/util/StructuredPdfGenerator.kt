@@ -1,12 +1,15 @@
 package com.example.digital_reports_app.util
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import androidx.core.content.ContextCompat
+import com.example.digital_reports_app.R
 import com.example.digital_reports_app.data.local.entity.ReportEntity
 import com.example.digital_reports_app.domain.model.FormKeys
 import com.example.digital_reports_app.domain.model.FormPage
@@ -19,7 +22,7 @@ import java.io.FileOutputStream
 
 /**
  * Genera el PDF final de un formato estructurado, replicando el diseño del formato en papel:
- * encabezado con logotipo oficial, campos, tablas con casillas, observaciones, comentarios y firmas.
+ * encabezado con el logotipo oficial de Pantaleon (SVG), campos, tablas con casillas, observaciones, comentarios y firmas.
  */
 object StructuredPdfGenerator {
 
@@ -35,7 +38,7 @@ object StructuredPdfGenerator {
         answers: Map<String, String>
     ): File {
         val doc = PdfDocument()
-        val renderer = Renderer(doc, form, answers)
+        val renderer = Renderer(context, doc, form, answers)
         form.pages.forEach { renderer.drawPage(it) }
         renderer.finish()
 
@@ -63,6 +66,7 @@ object StructuredPdfGenerator {
     }
 
     private class Renderer(
+        val context: Context,
         val doc: PdfDocument,
         val form: StructuredForm,
         val answers: Map<String, String>
@@ -127,7 +131,7 @@ object StructuredPdfGenerator {
             drawSignatures(fp)
         }
 
-        // ---------- Encabezado del documento con Logotipo Oficial Pantaleon ----------
+        // ---------- Encabezado del documento con Logotipo Oficial Pantaleon (SVG) ----------
         private fun drawDocHeader() {
             val top = y
             val h = 58f
@@ -139,28 +143,21 @@ object StructuredPdfGenerator {
             canvas.drawLine(M + logoW, top + h - 18f, M + CW, top + h - 18f, border)
             canvas.drawLine(M + CW - codeW, top + h - 18f, M + CW - codeW, top + h, border)
 
-            // Dibuja el emblema corporativo de Pantaleon
-            val logoCenterY = top + h / 2f
-            val greenPaint = paint(12f, bold = true, color = Color.rgb(22, 128, 61))
-            val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.rgb(22, 128, 61)
-                style = Paint.Style.FILL
-            }
-            canvas.drawCircle(M + 22f, logoCenterY, 14f, circlePaint)
+            // Dibuja la imagen vectorial oficial ic_logo_pantaleon desde drawable (pantaleon_ingenio_monte_rosa.svg)
+            val logoDrawable = ContextCompat.getDrawable(context, R.drawable.ic_logo_pantaleon)
+            if (logoDrawable != null) {
+                val logoWidth = 135
+                val logoHeight = 44
+                val logoBitmap = Bitmap.createBitmap(logoWidth, logoHeight, Bitmap.Config.ARGB_8888)
+                val logoCanvas = Canvas(logoBitmap)
+                logoDrawable.setBounds(0, 0, logoWidth, logoHeight)
+                logoDrawable.draw(logoCanvas)
 
-            val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.FILL
+                canvas.drawBitmap(logoBitmap, M + 5f, top + 7f, null)
+            } else {
+                val orgName = if (form.organization.contains("Pantaleon", ignoreCase = true)) "Pantaleon" else form.organization
+                canvas.drawText(orgName, M + 15f, top + 34f, paint(14f, bold = true, color = Color.rgb(22, 128, 61)))
             }
-            val leafPath = Path().apply {
-                moveTo(M + 22f, logoCenterY - 9f)
-                quadTo(M + 29f, logoCenterY, M + 22f, logoCenterY + 9f)
-                quadTo(M + 15f, logoCenterY, M + 22f, logoCenterY - 9f)
-            }
-            canvas.drawPath(leafPath, leafPaint)
-
-            val orgName = if (form.organization.contains("Pantaleon", ignoreCase = true)) "Pantaleon" else form.organization
-            canvas.drawText(orgName, M + 42f, logoCenterY + 5f, greenPaint)
 
             val midCenter = M + logoW + (CW - logoW - codeW) / 2f
             val titleP = paint(8.5f, bold = true, align = Paint.Align.CENTER)
