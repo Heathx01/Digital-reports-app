@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -431,10 +430,18 @@ private fun ChecklistItem(
 @Composable
 private fun SignaturePad(strokesJson: String, onChange: (String) -> Unit) {
     var size by remember { mutableStateOf(IntSize.Zero) }
-    val strokes = remember(strokesJson) {
-        mutableStateListOf<List<Pair<Float, Float>>>().apply { addAll(jsonToStrokes(strokesJson)) }
-    }
+    val strokes = remember { mutableStateListOf<List<Pair<Float, Float>>>() }
     var current by remember { mutableStateOf<List<Pair<Float, Float>>>(emptyList()) }
+
+    LaunchedEffect(strokesJson) {
+        if (strokesJson.isBlank()) {
+            strokes.clear()
+            current = emptyList()
+        } else {
+            strokes.clear()
+            strokes.addAll(jsonToStrokes(strokesJson))
+        }
+    }
 
     fun norm(o: Offset): Pair<Float, Float> {
         val w = size.width.coerceAtLeast(1)

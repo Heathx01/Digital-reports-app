@@ -19,7 +19,7 @@ import java.io.FileOutputStream
 
 /**
  * Genera el PDF final de un formato estructurado, replicando el diseño del formato en papel:
- * encabezado, campos, tablas con casillas, observaciones, comentarios y firmas.
+ * encabezado con logotipo oficial, campos, tablas con casillas, observaciones, comentarios y firmas.
  */
 object StructuredPdfGenerator {
 
@@ -74,7 +74,6 @@ object StructuredPdfGenerator {
 
         private val border = paint(8f, style = Paint.Style.STROKE)
         private val text8 = paint(8f)
-        private val text9b = paint(9f, bold = true)
 
         fun finish() {
             page?.let {
@@ -128,19 +127,40 @@ object StructuredPdfGenerator {
             drawSignatures(fp)
         }
 
-        // ---------- Encabezado del documento ----------
+        // ---------- Encabezado del documento con Logotipo Oficial Pantaleon ----------
         private fun drawDocHeader() {
             val top = y
-            val h = 56f
+            val h = 58f
             canvas.drawRect(M, top, M + CW, top + h, border)
-            val logoW = 150f
+            val logoW = 145f
             val codeW = 90f
             canvas.drawLine(M + logoW, top, M + logoW, top + h, border)
             canvas.drawLine(M + CW - codeW, top, M + CW - codeW, top + h, border)
             canvas.drawLine(M + logoW, top + h - 18f, M + CW, top + h - 18f, border)
             canvas.drawLine(M + CW - codeW, top + h - 18f, M + CW - codeW, top + h, border)
 
-            canvas.drawText(form.organization, M + 12f, top + 32f, paint(16f, bold = true, color = Color.rgb(60, 60, 60)))
+            // Dibuja el emblema corporativo de Pantaleon
+            val logoCenterY = top + h / 2f
+            val greenPaint = paint(12f, bold = true, color = Color.rgb(22, 128, 61))
+            val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(22, 128, 61)
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(M + 22f, logoCenterY, 14f, circlePaint)
+
+            val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.FILL
+            }
+            val leafPath = Path().apply {
+                moveTo(M + 22f, logoCenterY - 9f)
+                quadTo(M + 29f, logoCenterY, M + 22f, logoCenterY + 9f)
+                quadTo(M + 15f, logoCenterY, M + 22f, logoCenterY - 9f)
+            }
+            canvas.drawPath(leafPath, leafPaint)
+
+            val orgName = if (form.organization.contains("Pantaleon", ignoreCase = true)) "Pantaleon" else form.organization
+            canvas.drawText(orgName, M + 42f, logoCenterY + 5f, greenPaint)
 
             val midCenter = M + logoW + (CW - logoW - codeW) / 2f
             val titleP = paint(8.5f, bold = true, align = Paint.Align.CENTER)
@@ -197,7 +217,7 @@ object StructuredPdfGenerator {
             canvas.drawText(shown, x + lw + 2f, y + 10f, valueP)
         }
 
-        // ---------- Tablas ----------
+        // ---------- Tablas de evaluación sin desbordamiento ----------
         private fun columns(kind: RowKind): List<Pair<String, Float>> = when (kind) {
             RowKind.YES_NO -> listOf("SI" to 28f, "NO" to 28f)
             RowKind.COMPLY -> listOf("CUMPLE" to 38f, "NO CUMPLE" to 42f)
@@ -206,7 +226,7 @@ object StructuredPdfGenerator {
 
         private fun drawSection(s: FormSection) {
             val cols = columns(s.kind)
-            val labelW = 200f
+            val labelW = 210f
             val checkW = cols.sumOf { it.second.toDouble() }.toFloat()
             val obsW = CW - labelW - checkW
 
@@ -226,19 +246,25 @@ object StructuredPdfGenerator {
                 y += hh
             }
 
-            ensureSpace(16f + 28f)
+            ensureSpace(16f + 32f)
             header()
 
             s.items.forEach { item ->
-                val labelLines = wrap(item.label, text8, labelW - 8f)
+                val labelLines = wrap(item.label, text8, labelW - 10f)
                 val obs = answers[FormKeys.obs(item.id)].orEmpty()
-                val obsLines = if (obs.isBlank()) emptyList() else wrap(obs, text8, obsW - 8f)
-                val rowH = (maxOf(labelLines.size, obsLines.size) * 10f + 10f).coerceAtLeast(26f)
+                val obsLines = if (obs.isBlank()) emptyList() else wrap(obs, text8, obsW - 10f)
+                
+                // Cálculo de altura dinamica con espaciado amplio para evitar textos superpuestos
+                val lineCount = maxOf(labelLines.size, obsLines.size)
+                val rowH = (lineCount * 13f + 14f).coerceAtLeast(30f)
+                
                 ensureSpace(rowH) { header() }
 
                 var x = M
                 canvas.drawRect(x, y, x + labelW, y + rowH, border)
-                labelLines.forEachIndexed { i, l -> canvas.drawText(l, x + 4f, y + 12f + i * 10f, text8) }
+                labelLines.forEachIndexed { i, l -> 
+                    canvas.drawText(l, x + 5f, y + 14f + i * 12f, text8) 
+                }
                 x += labelW
 
                 val colXs = mutableListOf<Pair<Float, Float>>()
@@ -247,8 +273,11 @@ object StructuredPdfGenerator {
                     colXs.add(x to w)
                     x += w
                 }
+
                 canvas.drawRect(x, y, x + obsW, y + rowH, border)
-                obsLines.forEachIndexed { i, l -> canvas.drawText(l, x + 4f, y + 12f + i * 10f, text8) }
+                obsLines.forEachIndexed { i, l -> 
+                    canvas.drawText(l, x + 5f, y + 14f + i * 12f, text8) 
+                }
 
                 val ans = answers[FormKeys.answer(item.id)].orEmpty()
                 val markCol = when (s.kind) {
@@ -272,7 +301,7 @@ object StructuredPdfGenerator {
                     var v = answers[FormKeys.value(item.id)].orEmpty()
                     val vp = paint(8f, align = Paint.Align.CENTER)
                     while (v.isNotEmpty() && vp.measureText(v) > cw - 4f) v = v.dropLast(1)
-                    canvas.drawText(v, cx + cw / 2f, y + rowH / 2f + 3f, vp)
+                    canvas.drawText(v, cx + cw / 2f, y + rowH / 2f + 4f, vp)
                 }
                 y += rowH
             }
