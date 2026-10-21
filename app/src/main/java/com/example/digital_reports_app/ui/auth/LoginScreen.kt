@@ -1,25 +1,47 @@
 package com.example.digital_reports_app.ui.auth
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -27,12 +49,21 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.digital_reports_app.R
 import com.example.digital_reports_app.ui.theme.TelemetryMonoStyle
 import com.example.digital_reports_app.ui.theme.liquidGlass
 import com.example.digital_reports_app.util.BiometricAuthManager
 import com.example.digital_reports_app.util.BiometricAuthResult
+
+private fun findActivity(context: Context): FragmentActivity? {
+    var current = context
+    while (current is ContextWrapper) {
+        if (current is FragmentActivity) return current
+        current = current.baseContext
+    }
+    return null
+}
 
 @Composable
 fun LoginScreen(
@@ -42,10 +73,10 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
+    val activity = remember(context) { findActivity(context) }
 
     if (uiState.isLoggedIn) {
-        LaunchedEffect(Unit) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
             onNavigateToHome()
         }
     }
@@ -95,53 +126,48 @@ fun LoginScreen(
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header and Brand Logo
+                // Header and Official Pantaleon Brand Logo (SVG)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
-                            .liquidGlass(cornerRadius = 24.dp, prominent = true),
+                            .fillMaxWidth()
+                            .height(84.dp)
+                            .liquidGlass(cornerRadius = 24.dp, prominent = true)
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(54.dp)
-                                .background(MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(18.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "DocuField Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_logo_pantaleon),
+                            contentDescription = "Pantaleon Logo",
+                            modifier = Modifier.height(52.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Text(
-                        text = "DocuField Enterprise",
+                        text = stringResource(R.string.app_name),
+                        style = TelemetryMonoStyle,
                         color = MaterialTheme.colorScheme.primary,
-                        style = TelemetryMonoStyle
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "BIENVENIDO",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        fontWeight = FontWeight.Bold
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Inicia sesion con tu usuario",
+                        text = stringResource(R.string.title_welcome),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = stringResource(R.string.subtitle_welcome),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -149,42 +175,31 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Liquid Glass Card Form
+                // Input Form
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .liquidGlass(cornerRadius = 24.dp, prominent = true)
-                        .padding(24.dp)
+                        .liquidGlass(cornerRadius = 24.dp)
+                        .padding(20.dp)
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Código de Usuario",
+                            text = stringResource(R.string.label_user_code),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                        Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
                             value = uiState.userCode,
                             onValueChange = viewModel::onUserCodeChanged,
                             placeholder = { Text("ej. 215800") },
                             singleLine = true,
                             isError = uiState.userCodeError != null,
-                            supportingText = {
-                                if (uiState.userCodeError != null) {
-                                    Text(
-                                        text = uiState.userCodeError ?: "",
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            },
                             keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
+                                keyboardType = KeyboardType.Number,
                                 imeAction = ImeAction.Next
                             ),
                             modifier = Modifier.fillMaxWidth(),
@@ -194,33 +209,30 @@ fun LoginScreen(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
                             )
                         )
+                        if (uiState.userCodeError != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = uiState.userCodeError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "Contraseña",
+                            text = stringResource(R.string.label_password),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                        Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
                             value = uiState.password,
                             onValueChange = viewModel::onPasswordChanged,
                             placeholder = { Text("••••••••") },
                             singleLine = true,
                             isError = uiState.passwordError != null,
-                            supportingText = {
-                                if (uiState.passwordError != null) {
-                                    Text(
-                                        text = uiState.passwordError ?: "",
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            },
                             visualTransformation = if (uiState.isPasswordVisible) {
                                 VisualTransformation.None
                             } else {
@@ -230,8 +242,9 @@ fun LoginScreen(
                                 TextButton(onClick = viewModel::togglePasswordVisibility) {
                                     Text(
                                         text = if (uiState.isPasswordVisible) "Ocultar" else "Mostrar",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             },
@@ -240,9 +253,7 @@ fun LoginScreen(
                                 imeAction = ImeAction.Done
                             ),
                             keyboardActions = KeyboardActions(
-                                onDone = {
-                                    triggerLoginWithBiometrics()
-                                }
+                                onDone = { triggerLoginWithBiometrics() }
                             ),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -251,21 +262,21 @@ fun LoginScreen(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
                             )
                         )
+                        if (uiState.passwordError != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = uiState.passwordError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
 
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        val isSubmitEnabled = uiState.userCode.isNotBlank() &&
-                                uiState.password.isNotBlank() &&
-                                uiState.userCodeError == null &&
-                                uiState.passwordError == null &&
-                                !uiState.isLoading
+                        Spacer(modifier = Modifier.height(28.dp))
 
                         // Primary Login Button
                         Button(
-                            onClick = {
-                                triggerLoginWithBiometrics()
-                            },
-                            enabled = isSubmitEnabled,
+                            onClick = { triggerLoginWithBiometrics() },
+                            enabled = !uiState.isLoading,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
@@ -282,7 +293,7 @@ fun LoginScreen(
                                 )
                             } else {
                                 Text(
-                                    text = "Iniciar Sesión",
+                                    text = stringResource(R.string.btn_login),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -297,6 +308,24 @@ fun LoginScreen(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Biometric Auth Action
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { triggerLoginWithBiometrics() },
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🔒 Iniciar con Biometría / Huella Táctil",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
