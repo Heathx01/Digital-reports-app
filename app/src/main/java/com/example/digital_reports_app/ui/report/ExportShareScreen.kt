@@ -3,7 +3,6 @@ package com.example.digital_reports_app.ui.report
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +52,7 @@ import com.example.digital_reports_app.util.PdfReportGenerator
 @Composable
 fun ExportShareScreen(
     onBack: () -> Unit,
+    onOpenPdfViewer: (String) -> Unit = {},
     viewModel: ReportDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -171,12 +171,11 @@ fun ExportShareScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Button 1: Visualizar Reporte
+            // Button 1: Visualizar Reporte Interno
             Button(
                 onClick = {
                     if (report != null) {
-                        val pdfFile = PdfReportGenerator.generatePdfReport(context, report)
-                        PdfReportGenerator.openPdfFile(context, pdfFile)
+                        onOpenPdfViewer(report.reportId)
                     }
                 },
                 modifier = Modifier

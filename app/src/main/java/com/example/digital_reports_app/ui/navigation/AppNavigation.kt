@@ -16,10 +16,12 @@ import androidx.navigation.navArgument
 import com.example.digital_reports_app.ui.auth.LoginScreen
 import com.example.digital_reports_app.ui.home.HomeScreen
 import com.example.digital_reports_app.ui.profile.ProfileScreen
+import com.example.digital_reports_app.ui.profile.UserManagementScreen
 import com.example.digital_reports_app.ui.report.BitacoraScreen
 import com.example.digital_reports_app.ui.report.ExportShareScreen
 import com.example.digital_reports_app.ui.report.FormTemplateScreen
 import com.example.digital_reports_app.ui.report.GuidedFormScreen
+import com.example.digital_reports_app.ui.report.PdfViewerScreen
 
 object Screen {
     const val LOGIN = "login"
@@ -29,10 +31,13 @@ object Screen {
     const val GUIDED_FORM = "guided_form?formId={formId}"
     const val BITACORA = "bitacora"
     const val EXPORT_SHARE = "export_share/{reportId}"
+    const val PDF_VIEWER = "pdf_viewer/{reportId}"
     const val PROFILE = "profile"
+    const val USER_MANAGEMENT = "user_management"
 
     fun guidedFormRoute(formId: String? = null) = if (!formId.isNullOrBlank()) "guided_form?formId=$formId" else "guided_form"
     fun exportShareRoute(reportId: String) = "export_share/$reportId"
+    fun pdfViewerRoute(reportId: String) = "pdf_viewer/$reportId"
 }
 
 @Composable
@@ -157,6 +162,26 @@ fun AppNavigation(
             ExportShareScreen(
                 onBack = {
                     navController.popBackStack()
+                },
+                onOpenPdfViewer = { reportId ->
+                    navController.navigate(Screen.pdfViewerRoute(reportId))
+                }
+            )
+        }
+        composable(
+            route = Screen.PDF_VIEWER,
+            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
+        ) {
+            PdfViewerScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.USER_MANAGEMENT) {
+            UserManagementScreen(
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -169,6 +194,9 @@ fun AppNavigation(
                     navController.navigate(Screen.LOGIN) {
                         popUpTo(Screen.HOME) { inclusive = true }
                     }
+                },
+                onOpenUserManagement = {
+                    navController.navigate(Screen.USER_MANAGEMENT)
                 },
                 onTabSelected = { route ->
                     when (route) {

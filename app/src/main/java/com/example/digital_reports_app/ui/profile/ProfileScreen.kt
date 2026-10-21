@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -84,12 +83,14 @@ import com.example.digital_reports_app.worker.SyncReportsWorker
 fun ProfileScreen(
     onBack: () -> Unit = {},
     onLogout: () -> Unit = {},
+    onOpenUserManagement: () -> Unit = {},
     onTabSelected: (String) -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val userName = uiState.currentUser?.name ?: "Usuario"
     val userCode = uiState.currentUser?.userCode ?: "215800"
+    val isAdmin = uiState.currentUser?.role == "ADMIN"
     val context = LocalContext.current
 
     // Profile Edit State
@@ -102,7 +103,6 @@ fun ProfileScreen(
 
     var avatarUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher to select profile photo from gallery
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -269,7 +269,18 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
 
-                    // 1. Theme Selector: Seleccionar Tema
+                    // 1. User Management (Exclusive for Admins)
+                    if (isAdmin) {
+                        SettingItemClickable(
+                            icon = Icons.Outlined.Person,
+                            title = "Gestión de Usuarios de la Empresa",
+                            value = "Administrar",
+                            onClick = { onOpenUserManagement() }
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+
+                    // 2. Theme Selector: Seleccionar Tema
                     SettingItemValue(
                         icon = Icons.Outlined.Info,
                         title = stringResource(R.string.opt_select_theme),
@@ -278,7 +289,7 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // 2. Language Selector
+                    // 3. Language Selector
                     SettingItemValue(
                         icon = Icons.Outlined.Settings,
                         title = stringResource(R.string.opt_language),
@@ -287,7 +298,7 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // 3. Upload Reports to Cloud
+                    // 4. Upload Reports to Cloud
                     SettingItemClickable(
                         icon = Icons.Outlined.Check,
                         title = stringResource(R.string.opt_sync_cloud),
@@ -300,7 +311,7 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
 
-                    // 4. Refresh Report Status from Server
+                    // 5. Refresh Report Status from Server
                     SettingItemClickable(
                         icon = Icons.Outlined.Refresh,
                         title = stringResource(R.string.opt_refresh_status),
