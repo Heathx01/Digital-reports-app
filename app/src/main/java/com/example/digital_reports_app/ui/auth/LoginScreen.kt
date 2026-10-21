@@ -126,25 +126,16 @@ fun LoginScreen(
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header and Official Pantaleon Brand Logo (SVG)
+                // Header and Official Pantaleon Brand Logo (Direct, Clean Display)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(84.dp)
-                            .liquidGlass(cornerRadius = 24.dp, prominent = true)
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_logo_pantaleon),
-                            contentDescription = "Pantaleon Logo",
-                            modifier = Modifier.height(52.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_logo_pantaleon),
+                        contentDescription = "Pantaleon Logo",
+                        modifier = Modifier.height(58.dp)
+                    )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
