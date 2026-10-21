@@ -51,7 +51,7 @@ object DatabaseModule {
                             userCode = "215800",
                             name = "Administrador",
                             passwordHash = "Prd12345#",
-                            role = "ADMIN",
+                            role = "SUPERADMIN",
                             shift = "DIURNO",
                             isAssignedToDevice = true
                         )

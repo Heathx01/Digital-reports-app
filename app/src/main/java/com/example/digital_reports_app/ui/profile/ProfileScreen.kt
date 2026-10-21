@@ -90,7 +90,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val userName = uiState.currentUser?.name ?: "Usuario"
     val userCode = uiState.currentUser?.userCode ?: "215800"
-    val isAdmin = uiState.currentUser?.role == "ADMIN"
+    val isSuperAdmin = uiState.currentUser?.role == "SUPERADMIN" || userCode == "215800"
     val context = LocalContext.current
 
     // Profile Edit State
@@ -269,11 +269,11 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
 
-                    // 1. User Management (Exclusive for Admins)
-                    if (isAdmin) {
+                    // 1. User Management (Exclusive for SuperAdmins)
+                    if (isSuperAdmin) {
                         SettingItemClickable(
                             icon = Icons.Outlined.Person,
-                            title = "Gestión de Usuarios de la Empresa",
+                            title = "Gestión de usuarios",
                             value = "Administrar",
                             onClick = { onOpenUserManagement() }
                         )
