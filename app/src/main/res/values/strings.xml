@@ -7,13 +7,13 @@
     <string name="title_bitacora">Bitácora de Expedientes</string>
     <string name="title_profile">Perfil</string>
     <string name="title_welcome">BIENVENIDO</string>
-    <string name="subtitle_welcome">Inicia sesión con tu usuario</string>
+    <string name="subtitle_welcome">Iniciar Sesion</string>
     <string name="label_user_code">Código de Usuario</string>
     <string name="label_password">Contraseña</string>
     <string name="btn_login">Iniciar Sesión</string>
     <string name="btn_logout">Cerrar Sesión</string>
     <string name="opt_select_theme">Seleccionar Tema</string>
-    <string name="opt_language">Idioma de la App</string>
+    <string name="opt_language">Idioma</string>
     <string name="opt_sync_cloud">Sincronizar Reportes con la Nube</string>
     <string name="opt_refresh_status">Actualizar Estado de Expedientes</string>
     <string name="opt_edit_profile">Perfil y Credenciales</string>
@@ -22,11 +22,11 @@
     <string name="label_new_password">Nueva Contraseña</string>
     <string name="btn_save_changes">Guardar Cambios</string>
     <string name="btn_cancel">Cancelar</string>
-    <string name="btn_guided_forms">📋 Llenar Formato Guiado Paso a Paso</string>
+    <string name="btn_guided_forms">📋 Llenar Formato</string>
     <string name="btn_create_template">➕ Crear Plantilla</string>
     <string name="btn_scan_photo">📷 Escanear Hoja Física</string>
     <string name="btn_upload_pdf">📄 Cargar Documento PDF</string>
-    <string name="text_subir">Subir</string>
-    <string name="text_obtener">Obtener</string>
+    <string name="text_subir">Sincronizar</string>
+    <string name="text_obtener">Actualizar</string>
     <string name="text_editar">Editar</string>
 </resources>

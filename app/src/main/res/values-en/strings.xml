@@ -26,7 +26,7 @@
     <string name="btn_create_template">➕ Create Template</string>
     <string name="btn_scan_photo">📷 Scan Physical Sheet</string>
     <string name="btn_upload_pdf">📄 Upload PDF Document</string>
-    <string name="text_subir">Upload</string>
-    <string name="text_obtener">Fetch</string>
+    <string name="text_subir">Sync</string>
+    <string name="text_obtener">Update</string>
     <string name="text_editar">Edit</string>
 </resources>
