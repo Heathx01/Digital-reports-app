@@ -50,15 +50,15 @@ class UserManagementViewModel @Inject constructor(
         userCode: String,
         passwordInput: String,
         role: String,
-        shift: String
+        shift: String = "ROTATIVO"
     ) {
         if (name.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa el nombre del trabajador.") }
+            _uiState.update { it.copy(errorMessage = "Ingresa el nombre completo del usuario.") }
             return
         }
 
         if (userCode.trim().length < 6) {
-            _uiState.update { it.copy(errorMessage = "El código debe tener al menos 6 dígitos.") }
+            _uiState.update { it.copy(errorMessage = "El código de trabajador debe tener al menos 6 dígitos.") }
             return
         }
 
@@ -67,10 +67,13 @@ class UserManagementViewModel @Inject constructor(
             return
         }
 
+        val validRoles = listOf("SUPERVISOR", "JEFE", "ADMIN", "SUPERADMIN")
+        val finalRole = if (role.uppercase() in validRoles) role.uppercase() else "SUPERVISOR"
+
         viewModelScope.launch {
             val existing = userDao.getUserByCode(userCode.trim())
             if (existing != null) {
-                _uiState.update { it.copy(errorMessage = "Ya existe un usuario con el código '$userCode'.") }
+                _uiState.update { it.copy(errorMessage = "Ya existe un usuario registrado con el código '$userCode'.") }
                 return@launch
             }
 
@@ -79,7 +82,7 @@ class UserManagementViewModel @Inject constructor(
                 userCode = userCode.trim(),
                 name = name.trim(),
                 passwordHash = SecurityUtils.hashPassword(passwordInput),
-                role = role,
+                role = finalRole,
                 shift = shift,
                 isAssignedToDevice = true
             )
