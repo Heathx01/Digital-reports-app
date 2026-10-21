@@ -14,8 +14,8 @@
     <string name="btn_logout">Cerrar Sesión</string>
     <string name="opt_select_theme">Seleccionar Tema</string>
     <string name="opt_language">Idioma</string>
-    <string name="opt_sync_cloud">Sincronizar Reportes con la Nube</string>
-    <string name="opt_refresh_status">Actualizar Estado de Expedientes</string>
+    <string name="opt_sync_cloud">Sincronizar</string>
+    <string name="opt_refresh_status">Actualizar</string>
     <string name="opt_edit_profile">Perfil y Credenciales</string>
     <string name="title_change_password">Cambiar Contraseña</string>
     <string name="label_current_password">Contraseña Actual</string>
