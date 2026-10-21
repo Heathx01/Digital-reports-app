@@ -7,7 +7,7 @@
     <string name="title_bitacora">Bitácora de Expedientes</string>
     <string name="title_profile">Perfil</string>
     <string name="title_welcome">BIENVENIDO</string>
-    <string name="subtitle_welcome">Iniciar Sesion</string>
+    <string name="subtitle_welcome">Inicia Sesion con tu usuario</string>
     <string name="label_user_code">Código de Usuario</string>
     <string name="label_password">Contraseña</string>
     <string name="btn_login">Iniciar Sesión</string>
