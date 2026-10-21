@@ -107,7 +107,25 @@ class GuidedFormViewModel @Inject constructor(
     }
 
     fun setAnswer(key: String, value: String) {
-        _uiState.update { it.copy(answers = it.answers + (key to value), errorMessage = null) }
+        val currentAnswers = _uiState.value.answers.toMutableMap()
+        currentAnswers[key] = value
+
+        // Auto-evaluate CUMPLE / NO CUMPLE based on measurement threshold
+        val form = _uiState.value.form
+        if (form != null && key.endsWith(".val")) {
+            val itemId = key.removeSuffix(".val")
+            val item = form.pages.flatMap { it.sections }.flatMap { it.items }.firstOrNull { it.id == itemId }
+            if (item != null) {
+                val compliance = item.checkNumericCompliance(value)
+                if (compliance == true) {
+                    currentAnswers[FormKeys.answer(itemId)] = "CUMPLE"
+                } else if (compliance == false) {
+                    currentAnswers[FormKeys.answer(itemId)] = "NO CUMPLE"
+                }
+            }
+        }
+
+        _uiState.update { it.copy(answers = currentAnswers, errorMessage = null) }
     }
 
     fun toggleAnswer(key: String, value: String) {
@@ -210,11 +228,23 @@ class GuidedFormViewModel @Inject constructor(
                     if (ans.isBlank()) {
                         return "Por favor evalúa el punto: '${item.label}' (Selecciona ${step.section.kind.positive} o ${step.section.kind.negative})."
                     }
-                    if (step.section.kind == RowKind.MEASURE) {
+                    if (step.section.kind == RowKind.MEASURE && item.unit != null) {
                         val measureVal = answers[FormKeys.value(item.id)].orEmpty().trim()
                         if (measureVal.isBlank()) {
                             return "Por favor ingresa el valor de medición para '${item.label}'."
                         }
+                    }
+
+                    // Discrepancy Validation between Numeric Value and CUMPLE / NO CUMPLE selection
+                    val valueText = answers[FormKeys.value(item.id)].orEmpty().trim()
+                    val compliance = item.checkNumericCompliance(valueText)
+                    if (compliance == false && ans.equals("CUMPLE", ignoreCase = true)) {
+                        val thresholdMsg = item.formatThreshold()
+                        return "⚠️ Discrepancia en '${item.label}': El valor de medición ($valueText) excede el límite permitido ($thresholdMsg). Debe marcarse como 'NO CUMPLE'."
+                    }
+                    if (compliance == true && ans.equals("NO CUMPLE", ignoreCase = true)) {
+                        val thresholdMsg = item.formatThreshold()
+                        return "⚠️ Discrepancia en '${item.label}': El valor de medición ($valueText) sí cumple con los parámetros exigidos ($thresholdMsg). Debe marcarse como 'CUMPLE'."
                     }
                 }
             }

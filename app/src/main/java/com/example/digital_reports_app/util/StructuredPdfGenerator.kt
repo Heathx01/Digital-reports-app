@@ -286,21 +286,25 @@ object StructuredPdfGenerator {
                 }
 
                 val ans = answers[FormKeys.answer(item.id)].orEmpty()
+                val positiveTarget = item.positiveAnswer ?: s.kind.positive
                 val markCol = when (s.kind) {
                     RowKind.YES_NO, RowKind.COMPLY -> when (ans) {
-                        s.kind.positive -> 0
-                        s.kind.negative -> 1
+                        "SI", "CUMPLE" -> 0
+                        "NO", "NO CUMPLE" -> 1
                         else -> -1
                     }
                     RowKind.MEASURE -> when (ans) {
-                        s.kind.positive -> 1
-                        s.kind.negative -> 2
+                        "CUMPLE" -> 1
+                        "NO CUMPLE" -> 2
                         else -> -1
                     }
                 }
                 if (markCol >= 0) {
                     val (cx, cw) = colXs[markCol]
-                    canvas.drawText("X", cx + cw / 2f, y + rowH / 2f + 4f, paint(11f, bold = true, align = Paint.Align.CENTER))
+                    val isPositive = ans.equals(positiveTarget, ignoreCase = true)
+                    val markText = if (isPositive) "✓" else "X"
+                    val markPaint = paint(12f, bold = true, color = Color.BLACK, align = Paint.Align.CENTER)
+                    canvas.drawText(markText, cx + cw / 2f, y + rowH / 2f + 4f, markPaint)
                 }
                 if (s.kind == RowKind.MEASURE) {
                     val (cx, cw) = colXs[0]

@@ -11,7 +11,41 @@ enum class RowKind(val positive: String, val negative: String) {
     MEASURE("CUMPLE", "NO CUMPLE")
 }
 
-data class FormItem(val id: String, val label: String)
+data class FormItem(
+    val id: String,
+    val label: String,
+    val unit: String? = null,
+    val positiveAnswer: String? = null,
+    val maxAllowedValue: Double? = null,
+    val minAllowedValue: Double? = null
+) {
+    /** Returns true if numeric value complies with max/min thresholds, false if non-compliant, null if no threshold or invalid number. */
+    fun checkNumericCompliance(valueText: String): Boolean? {
+        if (maxAllowedValue == null && minAllowedValue == null) return null
+        val clean = valueText
+            .replace("%", "")
+            .replace("cm", "")
+            .replace("t/ha", "")
+            .replace("m", "")
+            .trim()
+            .replace(",", ".")
+        val num = clean.toDoubleOrNull() ?: return null
+
+        if (maxAllowedValue != null && num > maxAllowedValue) return false
+        if (minAllowedValue != null && num < minAllowedValue) return false
+        return true
+    }
+
+    fun formatThreshold(): String {
+        val u = unit ?: ""
+        return when {
+            maxAllowedValue != null && minAllowedValue != null -> "entre $minAllowedValue y $maxAllowedValue $u"
+            maxAllowedValue != null -> "máximo $maxAllowedValue $u"
+            minAllowedValue != null -> "mínimo $minAllowedValue $u"
+            else -> ""
+        }
+    }
+}
 
 data class FormSection(
     val id: String,
@@ -102,9 +136,6 @@ fun jsonToStrokes(json: String): List<List<Pair<Float, Float>>> {
 
 object FormCatalog {
 
-    private fun items(prefix: String, vararg labels: String) =
-        labels.mapIndexed { i, l -> FormItem("$prefix${i + 1}", l) }
-
     // 1. Formato 2-CM-F005: Entrega y Recepción de Lote (.xlsx)
     val recepcionEntregaLotes = StructuredForm(
         id = "2-CM-F005",
@@ -129,35 +160,32 @@ object FormCatalog {
                 sections = listOf(
                     FormSection(
                         "rec_car", "Características del lote", RowKind.YES_NO,
-                        items(
-                            "rec_car",
-                            "La Finca lote cuenta con acceso adecuado ?",
-                            "Tiene cruceros intermedios adecuados ?",
-                            "Tiene bahías de descargue (trasiego de caña) ?",
-                            "El lote dispone de rondas mayores a 4 metros y libres de obstáculos?"
+                        listOf(
+                            FormItem("rec_car1", "La Finca lote cuenta con acceso adecuado ?"),
+                            FormItem("rec_car2", "Tiene cruceros intermedios adecuados ?"),
+                            FormItem("rec_car3", "Tiene bahías de descargue (trasiego de caña) ?"),
+                            FormItem("rec_car4", "El lote dispone de rondas mayores a 4 metros y libres de obstáculos?")
                         )
                     ),
                     FormSection(
                         "rec_obs", "Obstáculos dentro del lote", RowKind.YES_NO,
-                        items(
-                            "rec_obs",
-                            "El lote presenta exceso de humedad por riego?",
-                            "El lote tiene señalizado y despejado los hidrantes dentro del campo?",
-                            "El lote está libre de tubería de riego dentro del área productiva?",
-                            "El lote está libre de obstáculos (causes, troncos, tendidos eléctricos, bases de concreto, pozos, piedras, árboles, etc.)?"
+                        listOf(
+                            FormItem("rec_obs1", "El lote presenta exceso de humedad por riego?", positiveAnswer = "NO"),
+                            FormItem("rec_obs2", "El lote tiene señalizado y despejado los hidrantes dentro del campo?"),
+                            FormItem("rec_obs3", "El lote está libre de tubería de riego dentro del área productiva?"),
+                            FormItem("rec_obs4", "El lote está libre de obstáculos (causes, troncos, tendidos eléctricos, bases de concreto, pozos, piedras, árboles, etc.)?")
                         )
                     ),
                     FormSection(
                         "rec_med", "Mediciones antes del Corte", RowKind.MEASURE,
-                        items(
-                            "rec_med",
-                            "% De cepa expuesta antes del corte (debe ser 0%)",
-                            "% De espacios vacíos antes del corte mayor a 1metro",
-                            "% De despoblación antes del corte =< 7% (suma de espacios vacíos más cepa expuesta)",
-                            "Presencia de caña podrida y Seca",
-                            "Altura del lomo del surco. (No mayor de 20 cm)",
-                            "Surcos por debajo del nivel del corte. (No mayor de 3 cm)",
-                            "Presencia de maleza en campo"
+                        listOf(
+                            FormItem("rec_med1", "% De cepa expuesta antes del corte (debe ser 0%)", unit = "%", maxAllowedValue = 0.0),
+                            FormItem("rec_med2", "% De espacios vacíos antes del corte mayor a 1metro", unit = "%", maxAllowedValue = 0.0),
+                            FormItem("rec_med3", "% De despoblación antes del corte =< 7% (suma de espacios vacíos más cepa expuesta)", unit = "%", maxAllowedValue = 7.0),
+                            FormItem("rec_med4", "Presencia de caña podrida y Seca"),
+                            FormItem("rec_med5", "Altura del lomo del surco. (No mayor de 20 cm)", unit = "cm", maxAllowedValue = 20.0),
+                            FormItem("rec_med6", "Surcos por debajo del nivel del corte. (No mayor de 3 cm)", unit = "cm", maxAllowedValue = 3.0),
+                            FormItem("rec_med7", "Presencia de maleza en campo")
                         )
                     )
                 ),
@@ -180,21 +208,19 @@ object FormCatalog {
                 sections = listOf(
                     FormSection(
                         "ent_par", "PARÁMETROS DE POS COSECHA", RowKind.COMPLY,
-                        items(
-                            "ent_par",
-                            "Caña dejada Max 2.5t / ha",
-                            "Área productiva limpia de caña corta",
-                            "Trasiego limpia de caña corta",
-                            "Se levantó en tiempo la caña dejada (24 Hr después del corte).",
-                            "Hidrantes en buen estado"
+                        listOf(
+                            FormItem("ent_par1", "Caña dejada Max 2.5t / ha", unit = "t/ha", maxAllowedValue = 2.5),
+                            FormItem("ent_par2", "Área productiva limpia de caña corta"),
+                            FormItem("ent_par3", "Trasiego limpia de caña corta"),
+                            FormItem("ent_par4", "Se levantó en tiempo la caña dejada (24 Hr después del corte)."),
+                            FormItem("ent_par5", "Hidrantes en buen estado")
                         )
                     ),
                     FormSection(
                         "ent_val", "Validación y entrega", RowKind.COMPLY,
-                        items(
-                            "ent_val",
-                            "Validó el supervisor y/o guarda finca las condiciones del lote con el supervisor de cosecha",
-                            "Entregó el supervisor de cosecha mecanizada al supervisor de zona y/o Resp. de Finca"
+                        listOf(
+                            FormItem("ent_val1", "Validó el supervisor y/o guarda finca las condiciones del lote con el supervisor de cosecha"),
+                            FormItem("ent_val2", "Entregó el supervisor de cosecha mecanizada al supervisor de zona y/o Resp. de Finca")
                         )
                     )
                 ),
@@ -233,52 +259,49 @@ object FormCatalog {
                 sections = listOf(
                     FormSection(
                         "eng_equipo", "Equipo de Arrastre Seleccionado", RowKind.YES_NO,
-                        items(
-                            "eng_equipo",
-                            "Carretas",
-                            "Plataforma",
-                            "Volteo",
-                            "Nodriza",
-                            "Cable Remolque"
+                        listOf(
+                            FormItem("eng_eq1", "Carretas"),
+                            FormItem("eng_eq2", "Plataforma"),
+                            FormItem("eng_eq3", "Volteo"),
+                            FormItem("eng_eq4", "Nodriza"),
+                            FormItem("eng_eq5", "Cable Remolque")
                         )
                     ),
                     FormSection(
                         "eng_epp", "Verificación de Equipo de Protección Personal (EPP)", RowKind.YES_NO,
-                        items(
-                            "eng_epp",
-                            "Casco con barbiquejo en buen estado?",
-                            "Botas con punta metálica?",
-                            "Uniforme reglamentario para el puesto?",
-                            "Lentes de seguridad transparentes/oscuros?",
-                            "Guantes de cuero largo?"
+                        listOf(
+                            FormItem("eng_epp1", "Casco con barbiquejo en buen estado?"),
+                            FormItem("eng_epp2", "Botas con punta metálica?"),
+                            FormItem("eng_epp3", "Uniforme reglamentario para el puesto?"),
+                            FormItem("eng_epp4", "Lentes de seguridad transparentes/oscuros?"),
+                            FormItem("eng_epp5", "Guantes de cuero largo?")
                         )
                     ),
                     FormSection(
                         "eng_peligros", "Lista de Chequeo de Peligros Controlados", RowKind.YES_NO,
-                        items(
-                            "eng_peligros",
-                            "¿En el ambiente hay presencia de lluvia, tormenta eléctrica o vientos fuertes?",
-                            "¿Presencia de humedad o inestabilidad en el suelo?",
-                            "¿El colaborador que realiza la labor cuenta con las competencias requeridas?",
-                            "¿El ayudante IM VERIFICA que los dos seguros del tornamesa estén cerrados?",
-                            "¿En el área de trabajo cuenta con los ayudantes establecidos (2 requeridos)?",
-                            "¿El personal dispone de radio de comunicación para maniobras?",
-                            "¿Se utiliza una misma frecuencia y existe comunicación doble vía?",
-                            "¿Los equipos (tractor y cabezal) tienen alarma sonora de retroceso funcional?",
-                            "¿El Ayudante IM con radio NO es el mismo que manipula herramientas?",
-                            "¿Se cuenta con iluminación adecuada y suficiente para la labor?",
-                            "¿El lugar de enganche y desenganche está señalizado y delimitado?",
-                            "¿Están debidamente señalizados los puntos de enganche (color rojo)?",
-                            "¿Mecánicamente están funcionales los puntos de enganche?",
-                            "¿Los trabajadores tienen definida un área de seguridad donde ubicarse?",
-                            "¿El terreno donde se realizará el enganche tiene pendiente o inclinación?",
-                            "¿Hay personas ajenas a la actividad en el área de enganche?",
-                            "¿En el punto de trabajo se encuentra el tubo saca cuchillas?",
-                            "¿Fueron ubicadas las cuñas de seguridad antes de desenganchar las carretas?",
-                            "¿Se colocó tubo de enganche en dolly de carreta primaria antes del enganche?",
-                            "¿En el punto de trabajo se encuentra la cadena de alineación en buen estado?",
-                            "¿El personal cuenta con el tubo de enganche y desenganche en buen estado?",
-                            "¿El tractor de movimiento interno cuenta con compresor de aire y enganche autónomo?"
+                        listOf(
+                            FormItem("eng_pel1", "¿En el ambiente hay presencia de lluvia, tormenta eléctrica o vientos fuertes?", positiveAnswer = "NO"),
+                            FormItem("eng_pel2", "¿Presencia de humedad o inestabilidad en el suelo?", positiveAnswer = "NO"),
+                            FormItem("eng_pel3", "¿El colaborador que realiza la labor cuenta con las competencias requeridas?"),
+                            FormItem("eng_pel4", "¿El ayudante IM VERIFICA que los dos seguros del tornamesa estén cerrados?"),
+                            FormItem("eng_pel5", "¿En el área de trabajo cuenta con los ayudantes establecidos (2 requeridos)?"),
+                            FormItem("eng_pel6", "¿El personal dispone de radio de comunicación para maniobras?"),
+                            FormItem("eng_pel7", "¿Se utiliza una misma frecuencia y existe comunicación doble vía?"),
+                            FormItem("eng_pel8", "¿Los equipos (tractor y cabezal) tienen alarma sonora de retroceso funcional?"),
+                            FormItem("eng_pel9", "¿El Ayudante IM con radio NO es el mismo que manipula herramientas?"),
+                            FormItem("eng_pel10", "¿Se cuenta con iluminación adecuada y suficiente para la labor?"),
+                            FormItem("eng_pel11", "¿El lugar de enganche y desenganche está señalizado y delimitado?"),
+                            FormItem("eng_pel12", "¿Están debidamente señalizados los puntos de enganche (color rojo)?"),
+                            FormItem("eng_pel13", "¿Mecánicamente están funcionales los puntos de enganche?"),
+                            FormItem("eng_pel14", "¿Los trabajadores tienen definida un área de seguridad donde ubicarse?"),
+                            FormItem("eng_pel15", "¿El terreno donde se realizará el enganche tiene pendiente o inclinación?", positiveAnswer = "NO"),
+                            FormItem("eng_pel16", "¿Hay personas ajenas a la actividad en el área de enganche?", positiveAnswer = "NO"),
+                            FormItem("eng_pel17", "¿En el punto de trabajo se encuentra el tubo saca cuchillas?"),
+                            FormItem("eng_pel18", "¿Fueron ubicadas las cuñas de seguridad antes de desenganchar las carretas?"),
+                            FormItem("eng_pel19", "¿Se colocó tubo de enganche en dolly de carreta primaria antes del enganche?"),
+                            FormItem("eng_pel20", "¿En el punto de trabajo se encuentra la cadena de alineación en buen estado?"),
+                            FormItem("eng_pel21", "¿El personal cuenta con el tubo de enganche y desenganche en buen estado?"),
+                            FormItem("eng_pel22", "¿El tractor de movimiento interno cuenta con compresor de aire y enganche autónomo?")
                         )
                     )
                 ),
@@ -316,22 +339,20 @@ object FormCatalog {
                 sections = listOf(
                     FormSection(
                         "ats_pasos", "Evaluación de Pasos Críticos de la Tarea", RowKind.YES_NO,
-                        items(
-                            "ats_pasos",
-                            "Inspección pre-operacional de maquinaria realizada?",
-                            "Verificación de vías de acceso y pendiente del terreno?",
-                            "Distanciamiento seguro entre cosechadoras y tractores?",
-                            "Bloqueo de energías peligrosas previo a mantenimientos?"
+                        listOf(
+                            FormItem("ats_pas1", "Inspección pre-operacional de maquinaria realizada?"),
+                            FormItem("ats_pas2", "Verificación de vías de acceso y pendiente del terreno?"),
+                            FormItem("ats_pas3", "Distanciamiento seguro entre cosechadoras y tractores?"),
+                            FormItem("ats_pas4", "Bloqueo de energías peligrosas previo a mantenimientos?")
                         )
                     ),
                     FormSection(
                         "ats_epp", "Medidas de Control y Equipo de Protección", RowKind.COMPLY,
-                        items(
-                            "ats_epp",
-                            "Uso obligatorio de EPP completo en campo",
-                            "Delimitación y señalización de zona de maniobras",
-                            "Radios de comunicación operacional probados y activos",
-                            "Protocolo de emergencia y botiquín disponible en frente"
+                        listOf(
+                            FormItem("ats_epp1", "Uso obligatorio de EPP completo en campo"),
+                            FormItem("ats_epp2", "Delimitación y señalización de zona de maniobras"),
+                            FormItem("ats_epp3", "Radios de comunicación operacional probados y activos"),
+                            FormItem("ats_epp4", "Protocolo de emergencia y botiquín disponible en frente")
                         )
                     )
                 ),
@@ -368,25 +389,23 @@ object FormCatalog {
                 sections = listOf(
                     FormSection(
                         "val_crit1", "Evaluación de Infraestructura y Vías", RowKind.COMPLY,
-                        items(
-                            "val_crit1",
-                            "Longitud de surcos conforme (> 150m)",
-                            "Existencia de Bahía de Descargue (300m a 1km)",
-                            "Anchos de rondas libres de obstáculos (4m a 6m)",
-                            "Circuito cañero adecuado (6m a 8m)",
-                            "Crucero intermedio conforme a diseño (3m a 4m)"
+                        listOf(
+                            FormItem("val_crit1_1", "Longitud de surcos conforme (> 150m)", unit = "m", minAllowedValue = 150.0),
+                            FormItem("val_crit1_2", "Existencia de Bahía de Descargue (300m a 1km)", unit = "m", minAllowedValue = 300.0, maxAllowedValue = 1000.0),
+                            FormItem("val_crit1_3", "Anchos de rondas libres de obstáculos (4m a 6m)", unit = "m", minAllowedValue = 4.0, maxAllowedValue = 6.0),
+                            FormItem("val_crit1_4", "Circuito cañero adecuado (6m a 8m)", unit = "m", minAllowedValue = 6.0, maxAllowedValue = 8.0),
+                            FormItem("val_crit1_5", "Crucero intermedio conforme a diseño (3m a 4m)", unit = "m", minAllowedValue = 3.0, maxAllowedValue = 4.0)
                         )
                     ),
                     FormSection(
                         "val_crit2", "Condiciones Agrícolas y de Suelo", RowKind.COMPLY,
-                        items(
-                            "val_crit2",
-                            "Rendimientos agrícolas adecuados (>= 80 t/ha)",
-                            "Lote libre de obstáculos (piedras, árboles, terrazas)",
-                            "Distancia entre surcos adecuada (>= 1.50m)",
-                            "Números de cortes en rango (0 a 3 cortes)",
-                            "Condición de humedad del terreno (Seco)",
-                            "Nivelación del crucero con respecto al cuadro (<= 15cm)"
+                        listOf(
+                            FormItem("val_crit2_1", "Rendimientos agrícolas adecuados (>= 80 t/ha)", unit = "t/ha", minAllowedValue = 80.0),
+                            FormItem("val_crit2_2", "Lote libre de obstáculos (piedras, árboles, terrazas)"),
+                            FormItem("val_crit2_3", "Distancia entre surcos adecuada (>= 1.50m)", unit = "m", minAllowedValue = 1.5),
+                            FormItem("val_crit2_4", "Números de cortes en rango (0 a 3 cortes)", maxAllowedValue = 3.0),
+                            FormItem("val_crit2_5", "Condición de humedad del terreno (Seco)"),
+                            FormItem("val_crit2_6", "Nivelación del crucero con respecto al cuadro (<= 15cm)", unit = "cm", maxAllowedValue = 15.0)
                         )
                     )
                 ),

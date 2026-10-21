@@ -16,19 +16,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -238,7 +240,8 @@ fun GuidedFormScreen(
                                             onValueChange = { viewModel.setAnswer(key, it) },
                                             label = { Text("${f.label.lowercase().replaceFirstChar { it.uppercase() }} *") },
                                             modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
                                     }
                                 }
@@ -276,7 +279,8 @@ fun GuidedFormScreen(
                                         onValueChange = { viewModel.setAnswer(FormKeys.comments(step.page.id), it) },
                                         label = { Text(step.page.commentsLabel.trimEnd(':')) },
                                         modifier = Modifier.fillMaxWidth(),
-                                        minLines = 3
+                                        minLines = 3,
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                 }
                             }
@@ -302,7 +306,8 @@ fun GuidedFormScreen(
                                             onValueChange = { viewModel.setAnswer(nameKey, it) },
                                             label = { Text("Nombre de quien firma *") },
                                             modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
                                         SignaturePad(
                                             strokesJson = state.answers[strokesKey].orEmpty(),
@@ -332,6 +337,9 @@ fun GuidedFormScreen(
                             )
                         }
                     }
+
+                    // Extra Spacer at bottom so keyboard never obstructs lower fields
+                    Spacer(modifier = Modifier.height(140.dp))
                 }
             }
         }
@@ -375,7 +383,6 @@ private fun FormPicker(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChecklistItem(
     section: FormSection,
@@ -386,34 +393,166 @@ private fun ChecklistItem(
     onObs: (String) -> Unit
 ) {
     val current = answers[FormKeys.answer(item.id)].orEmpty()
+
+    // Determine target compliant/positive answer
+    val positiveTarget = item.positiveAnswer ?: section.kind.positive
+    val isYESNO = section.kind == RowKind.YES_NO
+
+    val opt1 = if (isYESNO) "SI" else "CUMPLE"
+    val opt2 = if (isYESNO) "NO" else "NO CUMPLE"
+
+    val isOpt1Favorable = (opt1 == positiveTarget)
+    val isOpt2Favorable = (opt2 == positiveTarget)
+
     Card(
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(item.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-            if (section.kind == RowKind.MEASURE) {
+            // Numeric Measurement Input with Auto Unit Suffix
+            if (section.kind == RowKind.MEASURE && item.unit != null) {
+                val unit = item.unit
+                val currentStored = answers[FormKeys.value(item.id)].orEmpty()
+                val currentDigits = currentStored
+                    .removeSuffix(" $unit")
+                    .removeSuffix(unit)
+                    .trim()
+
                 OutlinedTextField(
-                    value = answers[FormKeys.value(item.id)].orEmpty(),
-                    onValueChange = onValue,
-                    label = { Text("Medición *") },
+                    value = currentDigits,
+                    onValueChange = { input ->
+                        val cleanDigits = input.filter { c -> c.isDigit() || c == '.' || c == ',' }
+                        if (cleanDigits.isBlank()) {
+                            onValue("")
+                        } else {
+                            val formattedVal = if (unit == "%") "$cleanDigits%" else "$cleanDigits $unit"
+                            onValue(formattedVal)
+                        }
+                    },
+                    label = { Text("Medición ($unit) *") },
+                    suffix = {
+                        Text(
+                            text = unit,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Text)
+                    shape = RoundedCornerShape(10.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
+            } else if (section.kind == RowKind.MEASURE && item.unit == null) {
+                val valueStored = answers[FormKeys.value(item.id)].orEmpty()
+                if (valueStored.isNotBlank()) {
+                    OutlinedTextField(
+                        value = valueStored,
+                        onValueChange = onValue,
+                        label = { Text("Medición / Valor") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(section.kind.positive, section.kind.negative).forEach { option ->
-                    FilterChip(
-                        selected = current == option,
-                        onClick = { onToggle(option) },
-                        label = { Text(option) }
-                    )
+            // High-Contrast Dual Option Selector (SI / NO, CUMPLE / NO CUMPLE)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // OPTION 1 (SI / CUMPLE)
+                val isOpt1Selected = current == opt1
+                val opt1Bg = if (isOpt1Selected) {
+                    if (isOpt1Favorable) Color(0xFF2E7D32) else Color(0xFFC62828)
+                } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+                val opt1Border = if (isOpt1Selected) {
+                    if (isOpt1Favorable) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                } else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+
+                val opt1Icon = if (isOpt1Favorable) Icons.Outlined.Check else Icons.Outlined.Close
+
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clickable { onToggle(opt1) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = opt1Bg,
+                    border = BorderStroke(if (isOpt1Selected) 2.dp else 1.dp, opt1Border)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = opt1Icon,
+                            contentDescription = null,
+                            tint = if (isOpt1Selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = opt1,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = if (isOpt1Selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // OPTION 2 (NO / NO CUMPLE)
+                val isOpt2Selected = current == opt2
+                val opt2Bg = if (isOpt2Selected) {
+                    if (isOpt2Favorable) Color(0xFF2E7D32) else Color(0xFFC62828)
+                } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+                val opt2Border = if (isOpt2Selected) {
+                    if (isOpt2Favorable) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                } else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+
+                val opt2Icon = if (isOpt2Favorable) Icons.Outlined.Check else Icons.Outlined.Close
+
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clickable { onToggle(opt2) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = opt2Bg,
+                    border = BorderStroke(if (isOpt2Selected) 2.dp else 1.dp, opt2Border)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = opt2Icon,
+                            contentDescription = null,
+                            tint = if (isOpt2Selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = opt2,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = if (isOpt2Selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -421,7 +560,8 @@ private fun ChecklistItem(
                 value = answers[FormKeys.obs(item.id)].orEmpty(),
                 onValueChange = onObs,
                 label = { Text("Observaciones (opcional)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
             )
         }
     }
