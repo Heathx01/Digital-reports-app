@@ -22,7 +22,7 @@ import java.io.FileOutputStream
 
 /**
  * Genera el PDF final de un formato estructurado, replicando el diseño del formato en papel:
- * encabezado con el logotipo oficial de Pantaleon (SVG), campos, tablas con casillas, observaciones, comentarios y firmas.
+ * fondo de hoja blanca nítida, encabezado con el logotipo oficial de Pantaleon (SVG), campos, tablas con casillas, observaciones, comentarios y firmas.
  */
 object StructuredPdfGenerator {
 
@@ -93,6 +93,14 @@ object StructuredPdfGenerator {
             val info = PdfDocument.PageInfo.Builder(PW, PH, number).create()
             page = doc.startPage(info)
             canvas = page!!.canvas
+
+            // Relleno de hoja blanca nítida
+            val whitePaperPaint = Paint().apply {
+                color = Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawRect(0f, 0f, PW.toFloat(), PH.toFloat(), whitePaperPaint)
+
             y = M - 8f
         }
 
@@ -143,13 +151,14 @@ object StructuredPdfGenerator {
             canvas.drawLine(M + logoW, top + h - 18f, M + CW, top + h - 18f, border)
             canvas.drawLine(M + CW - codeW, top + h - 18f, M + CW - codeW, top + h, border)
 
-            // Dibuja la imagen vectorial oficial ic_logo_pantaleon desde drawable (pantaleon_ingenio_monte_rosa.svg)
+            // Dibuja la imagen vectorial oficial ic_logo_pantaleon desde drawable
             val logoDrawable = ContextCompat.getDrawable(context, R.drawable.ic_logo_pantaleon)
             if (logoDrawable != null) {
                 val logoWidth = 135
                 val logoHeight = 44
                 val logoBitmap = Bitmap.createBitmap(logoWidth, logoHeight, Bitmap.Config.ARGB_8888)
                 val logoCanvas = Canvas(logoBitmap)
+                logoCanvas.drawColor(Color.WHITE) // Fondo blanco para el logo
                 logoDrawable.setBounds(0, 0, logoWidth, logoHeight)
                 logoDrawable.draw(logoCanvas)
 

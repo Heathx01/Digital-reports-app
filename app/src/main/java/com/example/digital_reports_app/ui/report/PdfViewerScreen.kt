@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Share
@@ -89,6 +88,8 @@ fun PdfViewerScreen(
                             page.height * 2,
                             Bitmap.Config.ARGB_8888
                         )
+                        val pageCanvas = android.graphics.Canvas(bitmap)
+                        pageCanvas.drawColor(android.graphics.Color.WHITE) // Relleno previo de papel blanco puro
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         page.close()
                         renderedBitmaps.add(bitmap)
